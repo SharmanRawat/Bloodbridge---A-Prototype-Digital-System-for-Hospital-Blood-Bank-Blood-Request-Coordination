@@ -11,30 +11,26 @@ Currently, hospital staff manually call multiple blood banks, find a match, fill
 - **Frontend:** Plain HTML, CSS, and vanilla JavaScript — **no frameworks or libraries** except Bootstrap 5 (CDN)
 - **All API calls** use `fetch()` to relative paths (`/api/...`)
 
-## Project Structure
-
+#Project Structure:- 
 bloodbridge/
-├── server.js              # Main Express app (do not modify unless adding routes)
-├── database.js            # Creates tables and seeds dummy data
+├── server.js # Main Express server
+├── database.js # Database setup & seed data
 ├── routes/
-│   ├── hospital.js        # Hospital route file (currently unused)
-│   ├── bloodbank.js       # Blood bank routes (requests, inventory, acknowledge)
-│   └── auth.js            # Login/registration routes (coming soon)
-├── public/                # ← All frontend work goes here
-│   ├── index.html         # Landing page
-│   ├── hospital.html      # Hospital dashboard (create request)
-│   ├── hospital_status.html # Hospital request status page
-│   ├── bloodbank.html     # Blood bank dashboard (requests + inventory)
-│   ├── requisition.html   # Printable digital requisition slip
-│   ├── login.html         # Login page (coming soon)
-│   ├── register.html      # Registration page (coming soon)
-│   └── style.css          # Shared stylesheet (to be created by UI team)
+│ ├── hospital.js # Hospital routes
+│ ├── bloodbank.js # Blood bank routes
+│ └── auth.js # (Coming soon)
+├── public/
+│ ├── index.html # Landing page
+│ ├── hospital.html # Hospital dashboard
+│ ├── hospital_status.html # Request status page
+│ ├── bloodbank.html # Blood bank dashboard
+│ ├── requisition.html # Printable slip
+│ ├── login.html # (Coming soon)
+│ ├── register.html # (Coming soon)
+│ └── style.css # (To be created by UI team)
 ├── package.json
 ├── .gitignore
 └── README.md
-
-
-text
 
 ## How to Run (for everyone)
 1. **Clone** the repo:
