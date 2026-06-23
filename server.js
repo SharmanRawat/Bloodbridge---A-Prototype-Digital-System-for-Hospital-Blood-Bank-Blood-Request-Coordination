@@ -5,6 +5,10 @@ const app = express();
 
 app.use(express.json());
 app.use(cors());
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
 app.use(express.static('public'));
 
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -35,6 +39,8 @@ app.post('/api/hospital/request', (req, res) => {
   const results = banks.map(bank => ({
     bankId: bank.bankId,
     bankName: bank.bankName,
+    lat: bank.lat,           // ← ADD THIS
+    lng: bank.lng,           // ← ADD THIS
     distance: getDistance(hospital.lat, hospital.lng, bank.lat, bank.lng),
     unitsAvailable: bank.unitsAvailable
   })).sort((a, b) => a.distance - b.distance);

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BloodBridge – Welcome</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<style>
+  :root{
+    --bb-red:#C62828;
+    --bb-red-dark:#9b1c1c;
+    --bb-bg:#f8f9fa;
+    --bb-text:#212529;
+    --bb-muted:#6c757d;
+    --bb-border:#dee2e6;
+    --bb-radius:12px;
+  }
+  body{
+    background:var(--bb-bg);
+    color:var(--bb-text);
+    font-family:system-ui,-apple-system,sans-serif;
+  }
+  .bb-brand{font-weight:800;font-size:1.25rem;text-decoration:none;color:var(--bb-text);}
+  .bb-brand .dot{color:var(--bb-red);}
+  .navbar{background:#fff;border-bottom:1px solid var(--bb-border);}
+  .navbar .nav-link{font-weight:600;color:var(--bb-text);}
+  .navbar .nav-link:hover{color:var(--bb-red);}
+  .hero{
+    background:white;
+    border-radius:var(--bb-radius);
+    padding:3rem 2rem;
+    margin-top:2rem;
+    text-align:center;
+    box-shadow:0 4px 20px rgba(0,0,0,0.04);
+  }
+  .hero h1{font-weight:800;font-size:2.5rem;margin-bottom:0.5rem;}
+  .hero .lead{color:var(--bb-muted);font-size:1.2rem;margin-bottom:2rem;}
+  .btn-bb-red{
+    background-color:var(--bb-red);
+    border-color:var(--bb-red);
+    color:white;
+    font-weight:600;
+    padding:0.75rem 1.5rem;
+    border-radius:10px;
+    box-shadow:0 4px 12px rgba(198,40,40,0.25);
+  }
+  .btn-bb-red:hover{background-color:var(--bb-red-dark);border-color:var(--bb-red-dark);color:white;}
+  .btn-bb-ghost{
+    background:white;
+    border:2px solid var(--bb-border);
+    color:var(--bb-text);
+    font-weight:600;
+    padding:0.75rem 1.5rem;
+    border-radius:10px;
+  }
+  .btn-bb-ghost:hover{border-color:var(--bb-red);color:var(--bb-red);}
+  .feature-icon{font-size:2rem;color:var(--bb-red);margin-bottom:0.75rem;}
+  .bb-card{background:white;border:1px solid var(--bb-border);border-radius:var(--bb-radius);box-shadow:0 4px 12px rgba(0,0,0,0.03);}
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg sticky-top">
+  <div class="container">
+    <a class="bb-brand" href="index.html"><span class="dot">🩸</span> BloodBridge</a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="nav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="hospital.html">Hospital</a></li>
+        <li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank</a></li>
+        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container py-4">
+  <div class="hero">
+    <h1>🩸 BloodBridge</h1>
+    <p class="lead">A digital handshake between hospitals and blood banks.<br>Faster blood requests, zero phone calls.</p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a href="hospital.html" class="btn btn-bb-red"><i class="fa-solid fa-hospital me-2"></i>I'm a Hospital</a>
+      <a href="bloodbank.html" class="btn btn-bb-ghost"><i class="fa-solid fa-droplet me-2"></i>I'm a Blood Bank</a>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-4 text-center">
+    <div class="col-md-4">
+      <div class="bb-card p-4 h-100">
+        <div class="feature-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+        <h3 class="h5 fw-bold">Smart Search</h3>
+        <p class="text-muted">Instantly find the nearest blood bank with available stock.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="bb-card p-4 h-100">
+        <div class="feature-icon"><i class="fa-regular fa-paper-plane"></i></div>
+        <h3 class="h5 fw-bold">Digital Requisition</h3>
+        <p class="text-muted">Send a pre‑intimation with one click – no paper forms.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="bb-card p-4 h-100">
+        <div class="feature-icon"><i class="fa-solid fa-qrcode"></i></div>
+        <h3 class="h5 fw-bold">QR Verification</h3>
+        <p class="text-muted">Blood banks verify requests via a QR code on the slip.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

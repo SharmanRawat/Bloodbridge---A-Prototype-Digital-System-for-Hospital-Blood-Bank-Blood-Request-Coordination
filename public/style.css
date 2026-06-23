@@ -1,0 +1,155 @@
+cat > public/style.css << 'ENDOFFILE'
+/* ============================================================
+   🩸 BloodBridge – Shared Design System
+   Medical theme: red, white, light grey. Modern, clean.
+   ============================================================ */
+
+:root{
+  --bb-red:#C62828;
+  --bb-red-dark:#9b1c1c;
+  --bb-red-soft:#fdecec;
+  --bb-bg:#f8f9fa;
+  --bb-text:#212529;
+  --bb-muted:#6c757d;
+  --bb-border:#eceff3;
+  --bb-shadow:0 8px 30px rgba(17,24,39,.06);
+  --bb-shadow-lg:0 18px 50px rgba(198,40,40,.18);
+  --bb-radius:16px;
+}
+
+/* Base */
+body{
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+  background:var(--bb-bg);
+  color:var(--bb-text);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- Navbar ---------- */
+.bb-navbar{
+  background:#fff;
+  border-bottom:1px solid var(--bb-border);
+  backdrop-filter:saturate(180%) blur(8px);
+}
+.bb-brand{
+  font-weight:800;
+  font-size:1.25rem;
+  color:var(--bb-text);
+  letter-spacing:-.02em;
+  text-decoration:none;
+}
+.bb-brand:hover{color:var(--bb-text);}
+.bb-brand .dot{color:var(--bb-red);}
+.bb-navbar .nav-link{
+  color:var(--bb-text);
+  font-weight:600;
+  padding:.55rem .9rem !important;
+  border-radius:10px;
+  margin:0 2px;
+  transition:.15s ease;
+}
+.bb-navbar .nav-link:hover{background:var(--bb-bg);color:var(--bb-red);}
+.bb-navbar .nav-link.active{
+  background:var(--bb-red-soft);
+  color:var(--bb-red) !important;
+}
+
+/* ---------- Card ---------- */
+.bb-card{
+  background:#fff;
+  border:1px solid var(--bb-border);
+  border-radius:var(--bb-radius);
+  box-shadow:var(--bb-shadow);
+}
+.bb-card .card-body{padding:1.5rem}
+
+/* ---------- Form ---------- */
+.bb-label{
+  font-weight:600;
+  font-size:.85rem;
+  color:var(--bb-text);
+  margin-bottom:6px;
+  display:flex;align-items:center;gap:6px;
+}
+.bb-label i{color:var(--bb-red)}
+.form-control,.form-select{
+  height:52px;
+  border-radius:12px;
+  border:1.5px solid var(--bb-border);
+  font-weight:500;
+  font-size:1rem;
+  transition:.15s ease;
+}
+.form-control:focus,.form-select:focus{
+  border-color:var(--bb-red);
+  box-shadow:0 0 0 4px rgba(198,40,40,.12);
+}
+
+/* ---------- Buttons ---------- */
+.btn{
+  border-radius:12px;
+  font-weight:700;
+  padding:.85rem 1.25rem;
+  transition:.2s ease;
+}
+.btn-bb-red{
+  color:#fff;
+  background:linear-gradient(180deg,#d83232 0%,var(--bb-red) 60%,var(--bb-red-dark) 100%);
+  border:1px solid var(--bb-red-dark);
+  box-shadow:0 8px 20px rgba(198,40,40,.28);
+}
+.btn-bb-red:hover{
+  color:#fff;
+  transform:translateY(-1px);
+  box-shadow:var(--bb-shadow-lg);
+}
+.btn-bb-red:active{transform:translateY(0)}
+.btn-bb-ghost{
+  background:#fff;
+  border:1.5px solid var(--bb-border);
+  color:var(--bb-text);
+}
+.btn-bb-ghost:hover{border-color:var(--bb-red);color:var(--bb-red)}
+
+/* ---------- Loader ---------- */
+.bb-loader{
+  display:flex;align-items:center;justify-content:center;
+  padding:3rem 1rem;color:var(--bb-muted);font-weight:600;
+}
+.bb-spinner{
+  width:42px;height:42px;border-radius:50%;
+  border:4px solid var(--bb-red-soft);border-top-color:var(--bb-red);
+  animation:spin 1s linear infinite;margin-right:.75rem;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Success panel */
+.success-panel{
+  background:#fff;border-radius:var(--bb-radius);
+  box-shadow:var(--bb-shadow);border:1px solid var(--bb-border);
+  padding:2.25rem;text-align:center;
+  animation:slideUp .45s cubic-bezier(.2,.8,.2,1);
+}
+.success-icon{
+  width:76px;height:76px;border-radius:50%;
+  background:linear-gradient(135deg,#dcfce7,#bbf7d0);
+  color:#16a34a;display:flex;align-items:center;justify-content:center;
+  margin:0 auto 1rem;font-size:2rem;
+}
+.req-id{
+  display:inline-block;background:var(--bb-bg);
+  padding:.4rem .8rem;border-radius:10px;font-family:monospace;
+  font-weight:700;color:var(--bb-red);
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* Misc */
+.bb-page{padding:28px 0 80px}
+.bb-h1{font-weight:800;letter-spacing:-.02em;font-size:1.75rem;margin:0}
+.bb-sub{color:var(--bb-muted);margin-top:4px;font-size:.95rem}
+
+/* Responsive */
+@media(max-width:767.98px){
+  .bb-h1{font-size:1.4rem}
+}
+ENDOFFILE

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="test()">Click to test API</button>
+<script>
+async function test() {
+  const res = await fetch('/api/hospital/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hospitalId:1, bloodGroup:'B+', units:1 })
+  });
+  alert(res.ok ? 'SUCCESS! Check console.' : 'FAIL: ' + res.status);
+  if(res.ok) console.log(await res.json());
+}
+</script>
+</body>
+</html>
