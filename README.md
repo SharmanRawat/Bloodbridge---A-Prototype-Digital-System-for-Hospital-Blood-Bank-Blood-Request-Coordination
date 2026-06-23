@@ -12,26 +12,29 @@ Currently, hospital staff manually call multiple blood banks, find a match, fill
 - **All API calls** use `fetch()` to relative paths (`/api/...`)
 
 #Project Structure:- 
+## Project Structure
+
+```
 bloodbridge/
-├── server.js # Main Express server
-├── database.js # Database setup & seed data
+├── server.js                # Main Express server
+├── database.js              # Database setup & seed data
 ├── routes/
-│ ├── hospital.js # Hospital routes
-│ ├── bloodbank.js # Blood bank routes
-│ └── auth.js # (Coming soon)
+│   ├── hospital.js          # Hospital routes
+│   ├── bloodbank.js         # Blood bank routes
+│   └── auth.js              # (Coming soon)
 ├── public/
-│ ├── index.html # Landing page
-│ ├── hospital.html # Hospital dashboard
-│ ├── hospital_status.html # Request status page
-│ ├── bloodbank.html # Blood bank dashboard
-│ ├── requisition.html # Printable slip
-│ ├── login.html # (Coming soon)
-│ ├── register.html # (Coming soon)
-│ └── style.css # (To be created by UI team)
+│   ├── index.html           # Landing page
+│   ├── hospital.html        # Hospital dashboard
+│   ├── hospital_status.html # Request status page
+│   ├── bloodbank.html       # Blood bank dashboard
+│   ├── requisition.html     # Printable slip
+│   ├── login.html           # (Coming soon)
+│   ├── register.html        # (Coming soon)
+│   └── style.css            # (To be created by UI team)
 ├── package.json
 ├── .gitignore
 └── README.md
-
+```
 ## How to Run (for everyone)
 1. **Clone** the repo:
    ```bash
@@ -106,13 +109,13 @@ One team member is adding login and registration pages. Once ready, you'll use l
 Team
 Swapnil Pandya (Team Leader)
 
-[Your Name]
+Sharman Rawat
 
-[Member 3]
+Sat Joshi
 
-[Member 4]
+Het Varia
 
-[Member 5]
+Yug Patel
 
 License
 This project is for educational purposes only.
@@ -121,8 +124,3 @@ text
 
 ---
 
-### How to use this
-- Delete your current `README.md` (if any) with `rm README.md`.
-- Then create the new one:
-  ```bash
-  nano README.md
