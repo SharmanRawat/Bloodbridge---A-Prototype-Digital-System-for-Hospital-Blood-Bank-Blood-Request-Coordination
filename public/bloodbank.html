@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BloodBank Dashboard - BloodBridge</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <h1 class="mb-4">BloodBridge – Blood Bank Dashboard</h1>
+
+    <!-- Bank selector -->
+    <div class="mb-3">
+      <label for="bankSelect" class="form-label">Logged in as:</label>
+      <select id="bankSelect" class="form-select w-auto">
+        <option value="1">Red Cross Vadodara</option>
+        <option value="2">SSG Blood Bank Vadodara</option>
+        <option value="3">GMERS Gotri</option>
+      </select>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="bankTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button">Incoming Requests</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button">Update Inventory</button>
+      </li>
+    </ul>
+
+    <div class="tab-content mt-3">
+      <!-- Incoming Requests Tab -->
+      <div class="tab-pane fade show active" id="requests">
+        <div id="requestsList"></div>
+      </div>
+
+      <!-- Inventory Tab -->
+      <div class="tab-pane fade" id="inventory">
+        <form id="inventoryForm" class="row g-3 mb-3">
+          <div class="col-auto">
+            <label for="bloodGroup" class="form-label">Blood Group</label>
+            <select id="bloodGroup" class="form-select">
+              <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <label for="units" class="form-label">Units</label>
+            <input type="number" id="units" class="form-control" min="0" value="0">
+          </div>
+          <div class="col-auto align-self-end">
+            <button type="submit" class="btn btn-primary">Update Stock</button>
+          </div>
+        </form>
+        <div id="inventoryTable"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const bankSelect = document.getElementById('bankSelect');
+    const requestsList = document.getElementById('requestsList');
+    const inventoryForm = document.getElementById('inventoryForm');
+    const inventoryTable = document.getElementById('inventoryTable');
+
+    function getBankId() {
+      return bankSelect.value;
+    }
+
+    async function loadRequests() {
+      const bankId = getBankId();
+      try {
+        const res = await fetch(`/api/bloodbank/requests/${bankId}`);
+        const data = await res.json();
+        if (data.length === 0) {
+          requestsList.innerHTML = '<div class="alert alert-info">No incoming requests.</div>';
+          return;
+        }
+        requestsList.innerHTML = data.map(req => `
+          <div class="card mb-2">
+            <div class="card-body">
+              <h5 class="card-title">Request #${req.id} (${req.blood_group})</h5>
+              <p class="card-text">
+                Hospital: ${req.hospital_name} | Units: ${req.units} | Urgency: ${req.urgency}<br>
+                Status: <span class="badge bg-${req.status === 'Pending' ? 'warning' : 'success'}">${req.status}</span><br>
+                Created: ${new Date(req.created_at).toLocaleString()}
+              </p>
+              ${req.status === 'Pending' ? `<button class="btn btn-success btn-sm" onclick="acknowledgeRequest(${req.id})">Acknowledge</button>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function acknowledgeRequest(id) {
+      try {
+        await fetch(`/api/bloodbank/request/${id}/acknowledge`, { method: 'PUT' });
+        loadRequests();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadInventory() {
+      const bankId = getBankId();
+      try {
+        const res = await fetch(`/api/bloodbank/inventory/${bankId}`);
+        const data = await res.json();
+        if (data.length === 0) {
+          inventoryTable.innerHTML = '<div class="alert alert-info">No inventory data.</div>';
+          return;
+        }
+        inventoryTable.innerHTML = `
+          <table class="table table-bordered">
+            <thead><tr><th>Blood Group</th><th>Units</th><th>Last Updated</th></tr></thead>
+            <tbody>
+              ${data.map(item => `<tr><td>${item.blood_group}</td><td>${item.units}</td><td>${new Date(item.last_updated).toLocaleString()}</td></tr>`).join('')}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    inventoryForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const bankId = getBankId();
+      const bloodGroup = document.getElementById('bloodGroup').value;
+      const units = parseInt(document.getElementById('units').value);
+      try {
+        await fetch(`/api/bloodbank/inventory/${bankId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ bloodGroup, units })
+        });
+        alert('Inventory updated!');
+        loadInventory();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    bankSelect.addEventListener('change', () => {
+      loadRequests();
+      loadInventory();
+    });
+
+    setInterval(loadRequests, 10000);
+    loadRequests();
+    loadInventory();
+  </script>
+</body>
+</html>

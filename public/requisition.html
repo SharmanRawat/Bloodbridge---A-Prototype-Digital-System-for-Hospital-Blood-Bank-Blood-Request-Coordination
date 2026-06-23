@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Requisition Slip - BloodBridge</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    @media print {
+      body { font-size: 14px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body class="p-4">
+  <div class="container border p-4" style="max-width:600px">
+    <h3 class="text-center mb-3">Blood Requisition Slip</h3>
+    <div id="slipContent">Loading...</div>
+    <button class="btn btn-primary no-print mt-3" onclick="window.print()">Print</button>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    async function loadSlip() {
+      const res = await fetch(`/api/hospital/request/${id}`);
+      const req = await res.json();
+      document.getElementById('slipContent').innerHTML = `
+        <table class="table table-bordered">
+          <tr><td><strong>Request ID</strong></td><td>${req.id}</td></tr>
+          <tr><td><strong>Hospital</strong></td><td>${req.hospital_name}</td></tr>
+          <tr><td><strong>Blood Bank</strong></td><td>${req.bank_name}</td></tr>
+          <tr><td><strong>Blood Group</strong></td><td>${req.blood_group}</td></tr>
+          <tr><td><strong>Units</strong></td><td>${req.units}</td></tr>
+          <tr><td><strong>Urgency</strong></td><td>${req.urgency}</td></tr>
+          <tr><td><strong>Date</strong></td><td>${new Date(req.created_at).toLocaleString()}</td></tr>
+          <tr><td><strong>Status</strong></td><td>${req.status}</td></tr>
+        </table>
+        <p class="text-muted">This is a digital pre-intimation. Physical verification required at blood bank.</p>
+      `;
+    }
+    if (id) loadSlip();
+  </script>
+</body>
+</html>

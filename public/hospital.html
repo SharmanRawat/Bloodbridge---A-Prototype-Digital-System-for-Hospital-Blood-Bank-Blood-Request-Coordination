@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BloodBridge - Hospital Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <h1 class="mb-4">BloodBridge – Hospital Dashboard</h1>
+
+    <div id="requestForm">
+      <div class="row g-3">
+        <div class="col-auto">
+          <label for="bloodGroup" class="form-label">Blood Group</label>
+          <select id="bloodGroup" class="form-select">
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label for="units" class="form-label">Units</label>
+          <input type="number" id="units" class="form-control" min="1" max="5" value="1">
+        </div>
+        <div class="col-auto">
+          <label for="urgency" class="form-label">Urgency</label>
+          <select id="urgency" class="form-select">
+            <option>Normal</option>
+            <option>Emergency</option>
+          </select>
+        </div>
+        <div class="col-auto align-self-end">
+          <button id="searchBtn" class="btn btn-danger">Search Blood Banks</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsSection" class="mt-4" style="display:none;">
+      <h3>Matching Blood Banks</h3>
+      <div id="resultsList"></div>
+      <button id="newRequestBtn" class="btn btn-outline-secondary mt-3" style="display:none;">New Request</button>
+      <div id="messageArea"></div>
+    </div>
+
+    <div id="noResults" class="mt-4" style="display:none;">
+      <div class="alert alert-danger">No blood banks currently have this blood group in stock.</div>
+      <button id="newRequestNo" class="btn btn-outline-secondary">New Request</button>
+    </div>
+
+    <div id="successMessage" class="mt-4" style="display:none;">
+      <div class="alert alert-success" id="successContent"></div>
+      <button id="newRequestSuccess" class="btn btn-outline-secondary">New Request</button>
+    </div>
+  </div>
+
+  <script>
+    let lastSelectedBloodGroup = '';
+    let lastSelectedUnits = 0;
+    let lastSelectedUrgency = '';
+
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      const bloodGroup = document.getElementById('bloodGroup').value;
+      const units = parseInt(document.getElementById('units').value);
+      const urgency = document.getElementById('urgency').value;
+
+      lastSelectedBloodGroup = bloodGroup;
+      lastSelectedUnits = units;
+      lastSelectedUrgency = urgency;
+
+      const response = await fetch('/api/hospital/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hospitalId: 1, bloodGroup, units })
+      });
+      const data = await response.json();
+
+      document.getElementById('requestForm').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+
+      // FIX: backend returns a plain array, not an object with a .banks property
+      if (Array.isArray(data) && data.length > 0) {
+        document.getElementById('resultsSection').style.display = 'block';
+        document.getElementById('noResults').style.display = 'none';
+        document.getElementById('resultsList').innerHTML = data.map(bank => `
+          <div class="card mb-2">
+            <div class="card-body">
+              <h5 class="card-title">${bank.bankName}</h5>
+              <p>
+                Distance: <strong>${bank.distance.toFixed(1)} km</strong><br>
+                Available Units: <strong>${bank.unitsAvailable}</strong>
+              </p>
+              <button class="btn btn-primary btn-sm send-req-btn" data-bank-id="${bank.bankId}" data-bank-name="${bank.bankName}">Send Requisition to this Bank</button>
+            </div>
+          </div>
+        `).join('');
+
+        // Attach event listeners to the new buttons
+        document.querySelectorAll('.send-req-btn').forEach(btn => {
+          btn.addEventListener('click', sendRequisition);
+        });
+      } else {
+        document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('noResults').style.display = 'block';
+      }
+    });
+
+    async function sendRequisition(e) {
+      const bankId = e.target.getAttribute('data-bank-id');
+      const bankName = e.target.getAttribute('data-bank-name');
+
+      const response = await fetch('/api/hospital/request/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hospitalId: 1,
+          bloodGroup: lastSelectedBloodGroup,
+          units: lastSelectedUnits,
+          urgency: lastSelectedUrgency,
+          bankId: parseInt(bankId)
+        })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('successMessage').style.display = 'block';
+        document.getElementById('successContent').innerHTML = `
+          Requisition sent to <strong>${bankName}</strong>! Request ID: <strong>${data.requestId}</strong>.
+          <br>
+          <a href="requisition.html?id=${data.requestId}" target="_blank">View Slip</a> |
+          <a href="hospital_status.html">Check Status</a>
+        `;
+      } else {
+        alert('Failed to send requisition. Please try again.');
+      }
+    }
+
+    // Reset functionality
+    function resetForm() {
+      document.getElementById('requestForm').style.display = 'block';
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('noResults').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('units').value = 1;
+    }
+
+    document.getElementById('newRequestBtn').addEventListener('click', resetForm);
+    document.getElementById('newRequestNo').addEventListener('click', resetForm);
+    document.getElementById('newRequestSuccess').addEventListener('click', resetForm);
+  </script>
+</body>
+</html>
