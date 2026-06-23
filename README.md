@@ -66,17 +66,19 @@ Already Working Features
 ✅ Hospital can track request status (Pending / Acknowledged) with auto‑refresh
 
 ✅ Printable requisition slip (open requisition.html?id=<id>)
+## API Endpoints (for reference)
 
-API Endpoints (for reference)
-Method	URL	Description
-POST	/api/hospital/request	Search banks for a blood group
-POST	/api/hospital/request/confirm	Create request & deduct inventory
-GET	/api/hospital/requests/:hospitalId	List all requests for a hospital
-GET	/api/hospital/request/:id	Get single request details
-GET	/api/bloodbank/requests/:bankId	Get incoming requests for a bank
-PUT	/api/bloodbank/request/:id/acknowledge	Acknowledge a request
-GET	/api/bloodbank/inventory/:bankId	Get bank inventory
-PUT	/api/bloodbank/inventory/:bankId	Update inventory (units)
+**Hospital**
+- `POST /api/hospital/request` – Search banks for a blood group
+- `POST /api/hospital/request/confirm` – Create request & deduct inventory
+- `GET /api/hospital/requests/:hospitalId` – List all requests for a hospital
+- `GET /api/hospital/request/:id` – Get single request details
+
+**Blood Bank**
+- `GET /api/bloodbank/requests/:bankId` – Get incoming requests
+- `PUT /api/bloodbank/request/:id/acknowledge` – Acknowledge a request
+- `GET /api/bloodbank/inventory/:bankId` – Get bank inventory
+- `PUT /api/bloodbank/inventory/:bankId` – Update inventory
 Mandatory Rules for Frontend Developers
 Use plain HTML/CSS/JS only. Do not add React, Vue, or any build tool.
 
