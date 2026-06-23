@@ -12,25 +12,27 @@ Currently, hospital staff manually call multiple blood banks, find a match, fill
 - **All API calls** use `fetch()` to relative paths (`/api/...`)
 
 ## Project Structure
+
 bloodbridge/
-├── server.js # Main Express server (already done – only add routes with permission)
-├── database.js # Creates tables & seeds dummy data (already done)
+├── server.js              # Main Express app (do not modify unless adding routes)
+├── database.js            # Creates tables and seeds dummy data
 ├── routes/
-│ ├── hospital.js # (Not used currently – endpoints are directly in server.js)
-│ ├── bloodbank.js # Blood bank routes (requests, inventory, acknowledge)
-│ └── auth.js # Will be added for login/registration
-├── public/ # <-- YOUR WORK GOES HERE
-│ ├── index.html # Landing page (needs UI upgrade)
-│ ├── hospital.html # Hospital: create request, see matching banks
-│ ├── hospital_status.html # Hospital: see all requests and their status
-│ ├── bloodbank.html # Blood bank: incoming requests, inventory update
-│ ├── requisition.html # Printable digital requisition slip
-│ ├── login.html # (Coming soon – auth system)
-│ ├── register.html # (Coming soon)
-│ └── style.css # (TO BE CREATED by UI team)
+│   ├── hospital.js        # Hospital route file (currently unused)
+│   ├── bloodbank.js       # Blood bank routes (requests, inventory, acknowledge)
+│   └── auth.js            # Login/registration routes (coming soon)
+├── public/                # ← All frontend work goes here
+│   ├── index.html         # Landing page
+│   ├── hospital.html      # Hospital dashboard (create request)
+│   ├── hospital_status.html # Hospital request status page
+│   ├── bloodbank.html     # Blood bank dashboard (requests + inventory)
+│   ├── requisition.html   # Printable digital requisition slip
+│   ├── login.html         # Login page (coming soon)
+│   ├── register.html      # Registration page (coming soon)
+│   └── style.css          # Shared stylesheet (to be created by UI team)
 ├── package.json
 ├── .gitignore
 └── README.md
+
 
 text
 
