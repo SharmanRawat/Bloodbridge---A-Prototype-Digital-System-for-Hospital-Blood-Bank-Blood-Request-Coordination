@@ -3,13 +3,15 @@ const db = new Database('bloodbridge.db');
 
 db.exec('PRAGMA foreign_keys = ON');
 
+// Create tables (only SQL here – no JavaScript)
 db.exec(`
   CREATE TABLE IF NOT EXISTS hospital (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     address TEXT,
     lat REAL,
-    lng REAL
+    lng REAL,
+    password TEXT DEFAULT 'hospital123'
   );
 
   CREATE TABLE IF NOT EXISTS blood_bank (
@@ -17,7 +19,8 @@ db.exec(`
     name TEXT NOT NULL,
     address TEXT,
     lat REAL,
-    lng REAL
+    lng REAL,
+    password TEXT DEFAULT 'bank123'
   );
 
   CREATE TABLE IF NOT EXISTS inventory (
@@ -43,7 +46,7 @@ db.exec(`
   );
 `);
 
-// Only seed if no blood banks exist
+// Seed data only if no blood banks exist
 const bankCount = db.prepare('SELECT COUNT(*) AS count FROM blood_bank').get();
 if (bankCount.count === 0) {
   // Insert hospital
@@ -72,6 +75,10 @@ if (bankCount.count === 0) {
     }
   }
 }
+
+// Set default passwords for the existing dummy data
+db.prepare("UPDATE hospital SET password = 'hospital123' WHERE password IS NULL").run();
+db.prepare("UPDATE blood_bank SET password = 'bank123' WHERE password IS NULL").run();
 
 console.log('Database setup complete');
 module.exports = db;

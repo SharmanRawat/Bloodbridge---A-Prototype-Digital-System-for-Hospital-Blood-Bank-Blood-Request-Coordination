@@ -96,6 +96,9 @@ app.get('/api/hospital/request/:id', (req, res) => {
 const bloodbankRoutes = require('./routes/bloodbank');
 app.use('/api/bloodbank', bloodbankRoutes);
 
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+
 // ---- Start server ----
 app.listen(3000, () => {
   console.log('BloodBridge server running on http://localhost:3000');

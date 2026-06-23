@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BloodBridge - Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5" style="max-width: 400px;">
+    <h2 class="text-center mb-4">BloodBridge Login</h2>
+    <div id="errorMsg" class="alert alert-danger" style="display:none;"></div>
+    <form id="loginForm">
+      <div class="mb-3">
+        <label for="role" class="form-label">I am a</label>
+        <select id="role" class="form-select" required>
+          <option value="">-- Select --</option>
+          <option value="hospital">Hospital</option>
+          <option value="bloodbank">Blood Bank</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="username" class="form-label">Name (as registered)</label>
+        <input type="text" id="username" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" id="password" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-danger w-100">Login</button>
+    </form>
+    <p class="mt-3 text-center">Don't have an account? <a href="register.html">Register</a></p>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const role = document.getElementById('role').value;
+      const emailOrId = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, emailOrId, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('userId', data.userId);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('userName', data.name);
+        if (data.role === 'hospital') {
+          window.location.href = 'hospital.html';
+        } else {
+          window.location.href = 'bloodbank.html';
+        }
+      } else {
+        document.getElementById('errorMsg').textContent = data.error || 'Login failed';
+        document.getElementById('errorMsg').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
