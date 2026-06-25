@@ -28,14 +28,12 @@
   .status-acknowledged{background:#d4edda;color:#155724;}
   .btn-bb-red{background:var(--bb-red);color:white;font-weight:600;border-radius:10px;padding:0.5rem 1rem;border:none;}
   .btn-bb-red:hover{background:#9b1c1c;color:white;}
-  .stat-label{font-size:0.78rem;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;color:var(--bb-muted);margin-bottom:4px;}
-  .stat-value{font-size:1.9rem;font-weight:800;}
-  .stat-pending{color:#856404;}
-  .stat-acknowledged{color:#155724;}
+  .bb-page{padding-top:80px;}
 </style>
 </head>
 <body>
 
+<!-- Dynamic Navbar (same as hospital page) -->
 <nav class="navbar navbar-expand-lg sticky-top">
   <div class="container">
     <a class="bb-brand" href="index.html"><span class="dot">🩸</span> BloodBridge</a>
@@ -43,56 +41,71 @@
       <i class="fa-solid fa-bars"></i>
     </button>
     <div class="collapse navbar-collapse justify-content-end" id="nav">
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="hospital.html">Hospital</a></li>
-        <li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank</a></li>
-        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+      <ul class="navbar-nav" id="navbarLinks">
+        <!-- filled by JS -->
       </ul>
     </div>
   </div>
 </nav>
 
-<main class="container py-4">
-  <h1 class="mb-4">Request Status</h1>
-
-  <div class="row g-3 mb-4">
-    <div class="col-md-4">
-      <div class="bb-card p-3 text-center">
-        <div class="stat-label">Total Requests</div>
-        <div class="stat-value" id="statTotal">0</div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="bb-card p-3 text-center">
-        <div class="stat-label">Pending</div>
-        <div class="stat-value stat-pending" id="statPending">0</div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="bb-card p-3 text-center">
-        <div class="stat-label">Acknowledged</div>
-        <div class="stat-value stat-acknowledged" id="statAcknowledged">0</div>
-      </div>
-    </div>
+<main class="bb-page">
+  <div class="container">
+    <h1 class="mb-4">Request Status</h1>
+    <div id="statusList">Loading...</div>
   </div>
-
-  <div id="statusList">Loading...</div>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Auth check (requires hospital role) -->
 <script>
-// Use the same hospitalId as the request page
-const hospitalId = localStorage.getItem('userId') || 1;
+window.requiredRole = 'hospital';
+</script>
+<script src="auth-check.js"></script>
+
+<!-- Dynamic navbar script -->
+<script>
+(function() {
+  const role = localStorage.getItem('role');
+  const userId = localStorage.getItem('userId');
+  const nav = document.getElementById('navbarLinks');
+  if (!nav) return;
+
+  let links = '<li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>';
+
+  if (role && userId) {
+    if (role === 'hospital') {
+      links += '<li class="nav-item"><a class="nav-link" href="hospital.html">Hospital Dashboard</a></li>';
+    } else if (role === 'bloodbank') {
+      links += '<li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank Dashboard</a></li>';
+    }
+    links += '<li class="nav-item"><a class="nav-link" href="#" id="logoutBtn"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a></li>';
+  } else {
+    links += '<li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>';
+    links += '<li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>';
+  }
+  nav.innerHTML = links;
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.clear();
+      window.location.href = 'index.html';
+    });
+  }
+})();
+</script>
+
+<!-- Status fetch script -->
+<script>
+const hospitalId = parseInt(localStorage.getItem('userId'));
 
 async function loadStatus() {
   try {
     const res = await fetch(`/api/hospital/requests/${hospitalId}`);
     const data = await res.json();
-    const list = Array.isArray(data) ? data : [];
-
-    updateStats(list);
-
-    if (list.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
       document.getElementById('statusList').innerHTML = `
         <div class="bb-card p-4 text-center">
           <i class="fa-solid fa-inbox fa-3x text-muted mb-3"></i>
@@ -102,7 +115,7 @@ async function loadStatus() {
         </div>`;
       return;
     }
-    document.getElementById('statusList').innerHTML = list.map(req => `
+    document.getElementById('statusList').innerHTML = data.map(req => `
       <div class="bb-card p-3 mb-3">
         <div class="d-flex justify-content-between align-items-start">
           <div>
@@ -124,21 +137,9 @@ async function loadStatus() {
   }
 }
 
-// Derives the three dashboard stats from the SAME requests array the
-// page already fetches above — no additional API call is made.
-function updateStats(list) {
-  const total = list.length;
-  const pending = list.filter(r => r.status === 'Pending').length;
-  const acknowledged = list.filter(r => r.status === 'Acknowledged').length;
-  document.getElementById('statTotal').textContent = total;
-  document.getElementById('statPending').textContent = pending;
-  document.getElementById('statAcknowledged').textContent = acknowledged;
-}
-
 loadStatus();
 // Auto-refresh every 10s
 setInterval(loadStatus, 10000);
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -7,7 +7,6 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet">
-<!-- Inline critical styles – no external style.css needed -->
 <style>
   :root{
     --bb-red:#C62828;
@@ -22,9 +21,18 @@
     background:var(--bb-bg);
     color:var(--bb-text);
   }
+  /* ----- Navbar – solid white background, always on top ----- */
+  .navbar{
+    background-color: #fff !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    z-index: 1030;
+  }
   .bb-brand{font-weight:800;font-size:1.25rem;text-decoration:none;color:var(--bb-text);}
   .bb-brand .dot{color:var(--bb-red);}
-  .bb-page{padding:28px 0 80px}
+  .bb-page{
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
   .bb-h1{font-weight:800;font-size:1.75rem;margin-bottom:0.25rem;}
   .bb-sub{color:var(--bb-muted);font-size:0.95rem;}
   .bb-card{background:#fff;border:1px solid var(--bb-border);border-radius:var(--bb-radius);box-shadow:0 4px 12px rgba(0,0,0,0.05);}
@@ -51,36 +59,89 @@
   .bank-units small{font-size:0.75rem;color:var(--bb-muted);display:block;text-transform:uppercase;}
   .btn-bb-red i, .btn-bb-ghost i{margin-right:4px;}
   .bank-meta{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
-  #map{height:320px;width:100%;border-radius:var(--bb-radius);margin-bottom:1rem;border:1px solid var(--bb-border);z-index:0;}
+  #map{
+    height:320px;
+    width:100%;
+    border-radius:var(--bb-radius);
+    margin-bottom:1rem;
+    border:1px solid var(--bb-border);
+    z-index:0;
+    position:relative;
+  }
   .bb-demo-notice{font-size:0.8rem;color:var(--bb-muted);display:block;margin:-0.5rem 0 1rem;}
 </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg bb-navbar sticky-top">
+<nav class="navbar navbar-expand-lg sticky-top">
   <div class="container">
     <a class="bb-brand" href="index.html"><span class="dot">🩸</span> BloodBridge</a>
     <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
       <i class="fa-solid fa-bars"></i>
     </button>
     <div class="collapse navbar-collapse justify-content-end" id="nav">
-      <ul class="navbar-nav align-items-lg-center">
-        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-        <li class="nav-item"><a class="nav-link active" href="hospital.html">Hospital</a></li>
-        <li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank</a></li>
-        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+      <ul class="navbar-nav" id="navbarLinks">
+        <!-- filled by JS -->
       </ul>
     </div>
   </div>
 </nav>
+
+<script>
+window.requiredRole = 'hospital';
+</script>
+<script src="auth-check.js"></script>
+<script>
+(function() {
+  const role = localStorage.getItem('role');
+  const userId = localStorage.getItem('userId');
+  const nav = document.getElementById('navbarLinks');
+  if (!nav) return;
+
+  let links = '<li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>';
+
+  if (role && userId) {
+    if (role === 'hospital') {
+      links += '<li class="nav-item"><a class="nav-link active" href="hospital.html">Hospital Dashboard</a></li>';
+    } else if (role === 'bloodbank') {
+      links += '<li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank Dashboard</a></li>';
+    }
+    links += '<li class="nav-item"><a class="nav-link" href="#" id="logoutBtn"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a></li>';
+  } else {
+    links += '<li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>';
+    links += '<li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>';
+  }
+  nav.innerHTML = links;
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.clear();
+      window.location.href = 'index.html';
+    });
+  }
+})();
+</script>
 
 <main class="bb-page">
   <div class="container">
     <h1 class="bb-h1">Hospital Dashboard</h1>
     <p class="bb-sub">Find nearby blood banks and send requisitions in seconds.</p>
 
+    <!-- Search card with Request History button -->
     <div class="bb-card mb-4">
       <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h2 class="h5 fw-bold mb-1">Request Blood Units</h2>
+            <p class="bb-sub mb-0">Enter what you need — we'll rank the closest banks with stock.</p>
+          </div>
+          <a href="hospital_status.html" class="btn btn-bb-ghost flex-shrink-0 ms-3">
+            <i class="fa-solid fa-clock-rotate-left me-1"></i> Request History
+          </a>
+        </div>
+
         <form id="requestForm" class="row g-3">
           <div class="col-md-4">
             <label class="bb-label"><i class="fa-solid fa-droplet"></i> Blood Group</label>
@@ -153,11 +214,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="hospital.js"></script>
 <script>
-// Using the EXACT same working fetch logic as test.html
-const hospitalId = localStorage.getItem('userId') || 1;
-
-// Keeps the hospital's resolved location available to the "Send
-// Requisition" flow and to card render functions without re-fetching it.
+const hospitalId = parseInt(localStorage.getItem('userId'));
 let currentHospitalLoc = null;
 
 document.getElementById('requestForm').addEventListener('submit', async function(e) {
@@ -175,9 +232,6 @@ document.getElementById('requestForm').addEventListener('submit', async function
   document.getElementById('successPanel').style.display = 'none';
 
   try {
-    // Resolve the hospital's current location (geolocation, with a
-    // demo fallback if denied/unavailable) in parallel with the bank
-    // lookup so we don't add extra wait time on top of the existing call.
     const [hospitalLoc, res] = await Promise.all([
       BBHospital.getHospitalLocation(),
       fetch('/api/hospital/request', {
@@ -188,23 +242,16 @@ document.getElementById('requestForm').addEventListener('submit', async function
     ]);
 
     currentHospitalLoc = hospitalLoc;
-
     const data = await res.json();
     document.getElementById('loader').style.display = 'none';
 
-    // The backend returns a plain array, or an object with a message
     const banks = Array.isArray(data) ? data : data.banks || [];
-
     if (banks.length === 0) {
       document.getElementById('noResults').style.display = 'block';
       return;
     }
 
-    // Client-side Haversine distance + nearest-first sort. Reuses the
-    // bank objects already returned by the existing API call above —
-    // no new endpoint involved.
     const sortedBanks = BBHospital.enrichAndSortBanks(banks, hospitalLoc);
-
     displayResults(sortedBanks, bloodGroup, units, urgency, hospitalLoc);
 
     BBHospital.initMap('map', hospitalLoc);
@@ -220,13 +267,13 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
   const container = document.getElementById('bankList');
   container.innerHTML = '';
 
-  // Let the hospital know if any distances shown are based on demo
-  // coordinates rather than real API/GPS data.
   const anyDemo = hospitalLoc.isDemo || banks.some(b => b._isDemoLocation);
   document.getElementById('demoNotice').style.display = anyDemo ? 'block' : 'none';
 
   banks.forEach(bank => {
-    const directionsUrl = BBHospital.buildDirectionsUrl(bank._lat, bank._lng, hospitalLoc.lat, hospitalLoc.lng);
+    const directionsUrl = BBHospital.buildDirectionsUrl(
+      bank._lat, bank._lng, hospitalLoc.lat, hospitalLoc.lng
+    );
     const col = document.createElement('div');
     col.className = 'col-md-6 col-lg-4';
     col.innerHTML = `
@@ -241,7 +288,11 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
             <a class="btn btn-bb-ghost" href="${directionsUrl}" target="_blank" rel="noopener">
               <i class="fa-solid fa-diamond-turn-right"></i> Directions
             </a>
-            <button class="btn btn-bb-red send-btn" data-bankid="${bank.bankId}" data-bankname="${bank.bankName}">Send Requisition</button>
+            <button class="btn btn-bb-red send-btn"
+                    data-bankid="${bank.bankId}"
+                    data-bankname="${bank.bankName}">
+              Send Requisition
+            </button>
           </div>
         </div>
       </div>`;
@@ -250,31 +301,41 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
 
   document.getElementById('resultsSection').style.display = 'block';
 
-  // Add event listeners for Send buttons
   document.querySelectorAll('.send-btn').forEach(btn => {
     btn.addEventListener('click', async function() {
-      const bankId = this.dataset.bankid;
+      const bankId = parseInt(this.dataset.bankid);
       const bankName = this.dataset.bankname;
+      const originalHTML = this.innerHTML;
+
       this.disabled = true;
       this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Sending…';
 
-      const res = await fetch('/api/hospital/request/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hospitalId, bloodGroup, units, urgency, bankId: parseInt(bankId) })
-      });
-      const result = await res.json();
+      try {
+        const res = await fetch('/api/hospital/request/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hospitalId, bloodGroup, units, urgency, bankId
+          })
+        });
 
-      if (result.success) {
-        document.getElementById('resultsSection').style.display = 'none';
-        document.getElementById('successPanel').style.display = 'block';
-        document.getElementById('confirmReqId').textContent = result.requestId;
-        document.getElementById('confirmBank').textContent = bankName;
-        document.getElementById('slipLink').href = `requisition.html?id=${result.requestId}`;
-      } else {
-        alert('Failed to send requisition.');
+        const result = await res.json();
+        if (result.success) {
+          document.getElementById('resultsSection').style.display = 'none';
+          document.getElementById('successPanel').style.display = 'block';
+          document.getElementById('confirmReqId').textContent = result.requestId;
+          document.getElementById('confirmBank').textContent = bankName;
+          document.getElementById('slipLink').href = `requisition.html?id=${result.requestId}`;
+        } else {
+          alert('Failed: ' + (result.error || 'unknown error'));
+          this.disabled = false;
+          this.innerHTML = originalHTML;
+        }
+      } catch (err) {
+        console.error('Requisition error:', err);
+        alert('Network error – check console.');
         this.disabled = false;
-        this.innerHTML = 'Send Requisition';
+        this.innerHTML = originalHTML;
       }
     });
   });
@@ -288,6 +349,7 @@ function reset() {
   document.getElementById('successPanel').style.display = 'none';
   document.getElementById('units').value = 1;
   document.getElementById('bloodGroup').value = '';
+  if (typeof BBHospital.resetMap === 'function') BBHospital.resetMap();
 }
 </script>
 </body>

@@ -153,3 +153,7 @@ body{
   .bb-h1{font-size:1.4rem}
 }
 ENDOFFILE
+
+.bb-page {
+  padding-top: 80px;  /* pushes content below the sticky navbar */
+}

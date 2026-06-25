@@ -56,6 +56,7 @@
   }
   .btn-bb-ghost:hover{border-color:var(--bb-red);color:var(--bb-red);}
   .feature-icon{font-size:2rem;color:var(--bb-red);margin-bottom:0.75rem;}
+  .bb-page { padding-top: 80px; }
   .bb-card{background:white;border:1px solid var(--bb-border);border-radius:var(--bb-radius);box-shadow:0 4px 12px rgba(0,0,0,0.03);}
 </style>
 </head>
@@ -68,23 +69,55 @@
       <i class="fa-solid fa-bars"></i>
     </button>
     <div class="collapse navbar-collapse justify-content-end" id="nav">
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="hospital.html">Hospital</a></li>
-        <li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank</a></li>
-        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+      <ul class="navbar-nav" id="navbarLinks">
+        <!-- filled by JavaScript -->
       </ul>
     </div>
   </div>
 </nav>
+<script> //navbar script
+(function() {
+  const role = localStorage.getItem('role');
+  const userId = localStorage.getItem('userId');
+  const nav = document.getElementById('navbarLinks');
+  if (!nav) return;
 
-<main class="container py-4">
+  let links = '<li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>';
+
+  if (role && userId) {
+    // logged in – show the correct dashboard link
+    if (role === 'hospital') {
+      links += '<li class="nav-item"><a class="nav-link" href="hospital.html">Hospital Dashboard</a></li>';
+    } else if (role === 'bloodbank') {
+      links += '<li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank Dashboard</a></li>';
+    }
+    links += '<li class="nav-item"><a class="nav-link" href="#" id="logoutBtn"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a></li>';
+  } else {
+    // not logged in – show Login and Register
+    links += '<li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>';
+    links += '<li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>';
+  }
+
+  nav.innerHTML = links;
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.clear();
+      window.location.href = 'index.html';
+    });
+  }
+})();
+</script>
+
+<main class="bb-page container py-4">
   <div class="hero">
     <h1>🩸 BloodBridge</h1>
     <p class="lead">A digital handshake between hospitals and blood banks.<br>Faster blood requests, zero phone calls.</p>
     <div class="d-flex justify-content-center gap-3 flex-wrap">
-      <a href="hospital.html" class="btn btn-bb-red"><i class="fa-solid fa-hospital me-2"></i>I'm a Hospital</a>
-      <a href="bloodbank.html" class="btn btn-bb-ghost"><i class="fa-solid fa-droplet me-2"></i>I'm a Blood Bank</a>
+      <a href="login.html" class="btn btn-bb-red"><i class="fa-solid fa-hospital me-2"></i>I'm a Hospital</a>
+      <a href="login.html" class="btn btn-bb-ghost"><i class="fa-solid fa-droplet me-2"></i>I'm a Blood Bank</a>
     </div>
   </div>
 
