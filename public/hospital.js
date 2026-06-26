@@ -89,36 +89,23 @@ console.log("NO MATCH FOUND FOR:", key);
   // Coordinate resolution (real API data first, demo fallback second)
   // --------------------------------------------------------------------
   function resolveBankCoords(bank) {
-    console.log("BANK OBJECT:", bank);
+    var realLat = bank.latitude != null ? bank.latitude
+                : bank.lat != null ? bank.lat
+                : bank.bank_lat != null ? bank.bank_lat
+                : null;
+    var realLng = bank.longitude != null ? bank.longitude
+                : bank.lng != null ? bank.lng
+                : bank.lon != null ? bank.lon
+                : bank.bank_lng != null ? bank.bank_lng
+                : null;
 
-    var demo = getDemoCoordsForBank(bank);
-
-    if (demo) {
-        console.log("Using demo coordinates for:", bank.bankName);
-        return {
-            lat: demo.lat,
-            lng: demo.lng,
-            isDemo: true
-        };
+    if (realLat != null && realLng != null && realLat !== 0 && realLng !== 0) {
+        return { lat: realLat, lng: realLng, isDemo: false };
     }
 
-    var lat = bank.latitude != null ? bank.latitude
-            : bank.lat != null ? bank.lat
-            : bank.bank_lat != null ? bank.bank_lat
-            : null;
-
-    var lng = bank.longitude != null ? bank.longitude
-            : bank.lng != null ? bank.lng
-            : bank.lon != null ? bank.lon
-            : bank.bank_lng != null ? bank.bank_lng
-            : null;
-
-    return {
-        lat: lat,
-        lng: lng,
-        isDemo: false
-    };
-}
+    var demo = getDemoCoordsForBank(bank);
+    return { lat: demo.lat, lng: demo.lng, isDemo: true };
+  } 
   // --------------------------------------------------------------------
   // Haversine distance calculation (returns kilometers)
   // --------------------------------------------------------------------

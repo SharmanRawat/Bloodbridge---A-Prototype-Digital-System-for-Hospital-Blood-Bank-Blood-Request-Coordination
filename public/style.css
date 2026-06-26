@@ -1,4 +1,3 @@
-cat > public/style.css << 'ENDOFFILE'
 /* ============================================================
    🩸 BloodBridge – Shared Design System
    Medical theme: red, white, light grey. Modern, clean.
@@ -152,7 +151,7 @@ body{
 @media(max-width:767.98px){
   .bb-h1{font-size:1.4rem}
 }
-ENDOFFILE
+
 
 .bb-page {
   padding-top: 80px;  /* pushes content below the sticky navbar */

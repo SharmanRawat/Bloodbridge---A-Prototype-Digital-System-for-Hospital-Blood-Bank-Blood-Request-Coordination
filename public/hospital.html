@@ -21,7 +21,6 @@
     background:var(--bb-bg);
     color:var(--bb-text);
   }
-  /* ----- Navbar – solid white background, always on top ----- */
   .navbar{
     background-color: #fff !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
@@ -129,7 +128,6 @@ window.requiredRole = 'hospital';
     <h1 class="bb-h1">Hospital Dashboard</h1>
     <p class="bb-sub">Find nearby blood banks and send requisitions in seconds.</p>
 
-    <!-- Search card with Request History button -->
     <div class="bb-card mb-4">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-3">
@@ -217,6 +215,15 @@ window.requiredRole = 'hospital';
 const hospitalId = parseInt(localStorage.getItem('userId'));
 let currentHospitalLoc = null;
 
+// Helper to get auth headers
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'x-user-id': localStorage.getItem('userId') || '',
+    'x-user-role': localStorage.getItem('role') || ''
+  };
+}
+
 document.getElementById('requestForm').addEventListener('submit', async function(e) {
   e.preventDefault();
 
@@ -236,7 +243,7 @@ document.getElementById('requestForm').addEventListener('submit', async function
       BBHospital.getHospitalLocation(),
       fetch('/api/hospital/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ hospitalId, bloodGroup, units })
       })
     ]);
@@ -313,7 +320,7 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
       try {
         const res = await fetch('/api/hospital/request/confirm', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({
             hospitalId, bloodGroup, units, urgency, bankId
           })

@@ -18,7 +18,7 @@
   body{background:var(--bb-bg);color:var(--bb-text);font-family:system-ui,-apple-system,sans-serif;}
   .bb-brand{font-weight:800;font-size:1.25rem;text-decoration:none;color:var(--bb-text);}
   .bb-brand .dot{color:var(--bb-red);}
-  .navbar{background:#fff;border-bottom:1px solid var(--bb-border);}
+  .navbar{background-color:#fff !important;box-shadow:0 2px 8px rgba(0,0,0,0.04);z-index:1030;}
   .navbar .nav-link{font-weight:600;color:var(--bb-text);}
   .navbar .nav-link:hover{color:var(--bb-red);}
   .nav-link.active{color:var(--bb-red)!important;}
@@ -33,7 +33,7 @@
 </head>
 <body>
 
-<!-- Dynamic Navbar (same as hospital page) -->
+<!-- Dynamic Navbar -->
 <nav class="navbar navbar-expand-lg sticky-top">
   <div class="container">
     <a class="bb-brand" href="index.html"><span class="dot">🩸</span> BloodBridge</a>
@@ -97,48 +97,56 @@ window.requiredRole = 'hospital';
 })();
 </script>
 
-<!-- Status fetch script -->
+<!-- Status fetch script (with auth headers) -->
 <script>
 const hospitalId = parseInt(localStorage.getItem('userId'));
 
+function authHeaders() {
+    return {
+        'x-user-id': localStorage.getItem('userId') || '',
+        'x-user-role': localStorage.getItem('role') || ''
+    };
+}
+
 async function loadStatus() {
-  try {
-    const res = await fetch(`/api/hospital/requests/${hospitalId}`);
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
-      document.getElementById('statusList').innerHTML = `
-        <div class="bb-card p-4 text-center">
-          <i class="fa-solid fa-inbox fa-3x text-muted mb-3"></i>
-          <h3>No requests yet</h3>
-          <p class="text-muted">When you send a blood request, it will appear here.</p>
-          <a href="hospital.html" class="btn btn-bb-red">Make a Request</a>
-        </div>`;
-      return;
+    try {
+        const res = await fetch(`/api/hospital/requests/${hospitalId}`, {
+            headers: authHeaders()
+        });
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById('statusList').innerHTML = `
+                <div class="bb-card p-4 text-center">
+                    <i class="fa-solid fa-inbox fa-3x text-muted mb-3"></i>
+                    <h3>No requests yet</h3>
+                    <p class="text-muted">When you send a blood request, it will appear here.</p>
+                    <a href="hospital.html" class="btn btn-bb-red">Make a Request</a>
+                </div>`;
+            return;
+        }
+        document.getElementById('statusList').innerHTML = data.map(req => `
+            <div class="bb-card p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">Request #${req.id} – ${req.blood_group}</h5>
+                        <p class="mb-1 text-muted">Units: ${req.units} | Urgency: ${req.urgency}</p>
+                        <p class="mb-1">Blood Bank: ${req.bank_name || 'N/A'}</p>
+                        <small class="text-muted">${new Date(req.created_at).toLocaleString()}</small>
+                    </div>
+                    <span class="status-badge ${req.status === 'Pending' ? 'status-pending' : 'status-acknowledged'}">${req.status}</span>
+                </div>
+                <div class="mt-2">
+                    <a href="requisition.html?id=${req.id}" class="btn btn-sm btn-outline-secondary">View Slip</a>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        document.getElementById('statusList').innerHTML = `<div class="alert alert-danger">Failed to load requests.</div>`;
+        console.error(err);
     }
-    document.getElementById('statusList').innerHTML = data.map(req => `
-      <div class="bb-card p-3 mb-3">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <h5 class="mb-1">Request #${req.id} – ${req.blood_group}</h5>
-            <p class="mb-1 text-muted">Units: ${req.units} | Urgency: ${req.urgency}</p>
-            <p class="mb-1">Blood Bank: ${req.bank_name || 'N/A'}</p>
-            <small class="text-muted">${new Date(req.created_at).toLocaleString()}</small>
-          </div>
-          <span class="status-badge ${req.status === 'Pending' ? 'status-pending' : 'status-acknowledged'}">${req.status}</span>
-        </div>
-        <div class="mt-2">
-          <a href="requisition.html?id=${req.id}" class="btn btn-sm btn-outline-secondary">View Slip</a>
-        </div>
-      </div>
-    `).join('');
-  } catch (err) {
-    document.getElementById('statusList').innerHTML = `<div class="alert alert-danger">Failed to load requests.</div>`;
-    console.error(err);
-  }
 }
 
 loadStatus();
-// Auto-refresh every 10s
 setInterval(loadStatus, 10000);
 </script>
 </body>

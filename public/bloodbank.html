@@ -19,7 +19,11 @@
     body{background:var(--bb-bg);color:var(--bb-text);font-family:system-ui,-apple-system,sans-serif;}
     .bb-brand{font-weight:800;font-size:1.25rem;text-decoration:none;color:var(--bb-text);}
     .bb-brand .dot{color:var(--bb-red);}
-    .navbar{background:#fff;border-bottom:1px solid var(--bb-border);}
+    .navbar{
+      background-color:#fff !important;
+      box-shadow:0 2px 8px rgba(0,0,0,0.04);
+      z-index:1030;
+    }
     .navbar .nav-link{font-weight:600;color:var(--bb-text);}
     .navbar .nav-link:hover{color:var(--bb-red);}
     .nav-link.active{color:var(--bb-red)!important;}
@@ -28,6 +32,8 @@
     .btn-bb-red:hover{background-color:var(--bb-red-dark);color:white;}
     .form-control, .form-select{height:48px;border-radius:10px;}
     .bb-page{padding-top:80px;}
+    .inventory-form{background:#f9f9f9;padding:1rem;border-radius:var(--bb-radius);}
+    .current-stock{font-weight:600;color:var(--bb-red);}
   </style>
 </head>
 <body>
@@ -57,7 +63,7 @@
         <button class="nav-link active" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button">Incoming Requests</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button">Update Inventory</button>
+        <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button">Manage Inventory</button>
       </li>
     </ul>
 
@@ -69,22 +75,38 @@
 
       <!-- Inventory Tab -->
       <div class="tab-pane fade" id="inventory">
-        <form id="inventoryForm" class="row g-3 mb-3">
-          <div class="col-auto">
-            <label for="bloodGroup" class="form-label">Blood Group</label>
-            <select id="bloodGroup" class="form-select">
-              <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-              <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
-            </select>
+        <div class="inventory-form mb-4">
+          <h5 class="mb-3">Update Stock</h5>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label">Blood Group</label>
+              <select id="invBloodGroup" class="form-select">
+                <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Current Stock</label>
+              <div id="currentStockDisplay" class="current-stock form-control-plaintext">--</div>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Action</label>
+              <select id="invAction" class="form-select">
+                <option value="add">Add</option>
+                <option value="deduct">Deduct</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Quantity</label>
+              <input type="number" id="invQuantity" class="form-control" min="1" value="1">
+            </div>
+            <div class="col-md-3">
+              <button id="updateStockBtn" class="btn btn-bb-red w-100">Apply</button>
+            </div>
           </div>
-          <div class="col-auto">
-            <label for="units" class="form-label">Units</label>
-            <input type="number" id="units" class="form-control" min="0" value="0">
-          </div>
-          <div class="col-auto align-self-end">
-            <button type="submit" class="btn btn-bb-red">Update Stock</button>
-          </div>
-        </form>
+        </div>
+
+        <h5>Current Inventory</h5>
         <div id="inventoryTable"></div>
       </div>
     </div>
@@ -133,19 +155,33 @@ window.requiredRole = 'bloodbank';
 })();
 </script>
 
-<!-- Blood bank dashboard script -->
+<!-- Blood bank dashboard script with auth headers and improved inventory -->
 <script>
+// ----- Helper for authentication headers -----
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'x-user-id': localStorage.getItem('userId') || '',
+    'x-user-role': localStorage.getItem('role') || ''
+  };
+}
+
 // ----- 1. Get logged-in bank ID -----
 const bankId = parseInt(localStorage.getItem('userId'));
 
-// ----- 2. Display bank name (optional) -----
+// ----- 2. Display bank name -----
 const bankName = localStorage.getItem('userName') || 'Blood Bank';
 document.getElementById('bankNameDisplay').textContent = bankName;
 
-// ----- 3. Load incoming requests -----
+// ----- 3. Inventory data (global to look up current stock) -----
+let inventoryData = [];
+
+// ----- 4. Load incoming requests -----
 async function loadRequests() {
   try {
-    const res = await fetch(`/api/bloodbank/requests/${bankId}`);
+    const res = await fetch(`/api/bloodbank/requests/${bankId}`, {
+      headers: authHeaders()
+    });
     const data = await res.json();
     const container = document.getElementById('requestsList');
     if (!Array.isArray(data) || data.length === 0) {
@@ -173,10 +209,13 @@ async function loadRequests() {
   }
 }
 
-// ----- 4. Acknowledge a request -----
+// ----- 5. Acknowledge a request -----
 async function acknowledgeRequest(requestId) {
   try {
-    await fetch(`/api/bloodbank/request/${requestId}/acknowledge`, { method: 'PUT' });
+    await fetch(`/api/bloodbank/request/${requestId}/acknowledge`, {
+      method: 'PUT',
+      headers: authHeaders()
+    });
     loadRequests();
   } catch (err) {
     console.error(err);
@@ -184,54 +223,92 @@ async function acknowledgeRequest(requestId) {
   }
 }
 
-// ----- 5. Load inventory -----
+// ----- 6. Load inventory -----
 async function loadInventory() {
   try {
-    const res = await fetch(`/api/bloodbank/inventory/${bankId}`);
-    const data = await res.json();
+    const res = await fetch(`/api/bloodbank/inventory/${bankId}`, {
+      headers: authHeaders()
+    });
+    inventoryData = await res.json();
     const container = document.getElementById('inventoryTable');
-    if (!Array.isArray(data) || data.length === 0) {
+    if (!Array.isArray(inventoryData) || inventoryData.length === 0) {
       container.innerHTML = '<div class="alert alert-info">No inventory data.</div>';
-      return;
+    } else {
+      container.innerHTML = `
+        <table class="table table-bordered">
+          <thead><tr><th>Blood Group</th><th>Units</th><th>Last Updated</th></tr></thead>
+          <tbody>
+            ${inventoryData.map(item => `
+              <tr>
+                <td>${item.blood_group}</td>
+                <td>${item.units}</td>
+                <td>${new Date(item.last_updated).toLocaleString()}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
     }
-    container.innerHTML = `
-      <table class="table table-bordered">
-        <thead><tr><th>Blood Group</th><th>Units</th><th>Last Updated</th></tr></thead>
-        <tbody>
-          ${data.map(item => `
-            <tr>
-              <td>${item.blood_group}</td>
-              <td>${item.units}</td>
-              <td>${new Date(item.last_updated).toLocaleString()}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`;
+    // Update current stock display if a blood group is selected
+    updateCurrentStockDisplay();
   } catch (err) {
     console.error(err);
+    document.getElementById('inventoryTable').innerHTML = '<div class="alert alert-danger">Failed to load inventory.</div>';
   }
 }
 
-// ----- 6. Update inventory -----
-document.getElementById('inventoryForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const bloodGroup = document.getElementById('bloodGroup').value;
-  const units = parseInt(document.getElementById('units').value);
+// ----- 7. Update current stock display when blood group selection changes -----
+function getCurrentStock(bloodGroup) {
+  const item = inventoryData.find(i => i.blood_group === bloodGroup);
+  return item ? item.units : 0;
+}
+
+function updateCurrentStockDisplay() {
+  const bg = document.getElementById('invBloodGroup').value;
+  const stock = getCurrentStock(bg);
+  document.getElementById('currentStockDisplay').textContent = stock + ' units';
+}
+
+// Listen for blood group change in the inventory form
+document.getElementById('invBloodGroup').addEventListener('change', updateCurrentStockDisplay);
+
+// ----- 8. Apply stock update (Add/Deduct) -----
+document.getElementById('updateStockBtn').addEventListener('click', async () => {
+  const bloodGroup = document.getElementById('invBloodGroup').value;
+  const action = document.getElementById('invAction').value;
+  const quantity = parseInt(document.getElementById('invQuantity').value) || 0;
+  if (quantity <= 0) {
+    alert('Quantity must be a positive number.');
+    return;
+  }
+
+  const currentStock = getCurrentStock(bloodGroup);
+  let newStock;
+  if (action === 'add') {
+    newStock = currentStock + quantity;
+  } else {
+    newStock = Math.max(0, currentStock - quantity);
+  }
+
   try {
-    await fetch(`/api/bloodbank/inventory/${bankId}`, {
+    const res = await fetch(`/api/bloodbank/inventory/${bankId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bloodGroup, units })
+      headers: authHeaders(),
+      body: JSON.stringify({ bloodGroup, units: newStock })
     });
-    alert('Inventory updated!');
-    loadInventory();
+    const data = await res.json();
+    if (data.success) {
+      alert(`Stock updated! New stock for ${bloodGroup}: ${newStock} units.`);
+      loadInventory();
+    } else {
+      alert('Update failed: ' + (data.error || 'Unknown error'));
+    }
   } catch (err) {
     console.error(err);
     alert('Failed to update inventory.');
   }
 });
 
-// ----- 7. Auto-refresh & initial load -----
+// ----- 9. Initial load & auto-refresh -----
 setInterval(loadRequests, 10000);
 loadRequests();
 loadInventory();
