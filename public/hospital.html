@@ -49,6 +49,20 @@
   .btn-bb-red:hover{background-color:var(--bb-red-dark);border-color:var(--bb-red-dark);color:white;}
   .btn-bb-ghost{background:#fff;border:1.5px solid var(--bb-border);color:var(--bb-text);}
   .btn-bb-ghost:hover{border-color:var(--bb-red);color:var(--bb-red);}
+  .btn-call{
+    background-color:var(--bb-red);
+    border: none;
+    color: white;
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .btn-call:hover{ background-color: var(--bb-red-dark); color: white; }
   .bank-card{background:#fff;border:1px solid var(--bb-border);border-radius:var(--bb-radius);padding:1.25rem;transition:0.2s;}
   .bank-card:hover{box-shadow:0 8px 20px rgba(198,40,40,0.15);}
   .bank-name{font-weight:700;font-size:1.1rem;}
@@ -56,7 +70,7 @@
   .bank-units{font-size:2rem;font-weight:800;color:#16a34a;}
   .bank-units.low{color:var(--bb-red);}
   .bank-units small{font-size:0.75rem;color:var(--bb-muted);display:block;text-transform:uppercase;}
-  .btn-bb-red i, .btn-bb-ghost i{margin-right:4px;}
+  .btn-bb-red i, .btn-bb-ghost i, .btn-call i{margin-right:4px;}
   .bank-meta{display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
   #map{
     height:320px;
@@ -200,6 +214,7 @@ window.requiredRole = 'hospital';
         <h3>Requisition Sent!</h3>
         <p>Request ID: <strong id="confirmReqId"></strong></p>
         <p>Bank: <strong id="confirmBank"></strong></p>
+        <p><span id="confirmPhone"></span></p>
         <p id="confirmTimer" class="bb-sub mb-2"></p>
         <a id="slipLink" href="#" target="_blank" class="btn btn-bb-red me-2">View Slip</a>
         <a href="hospital_status.html" class="btn btn-bb-ghost">Track Status</a>
@@ -219,7 +234,6 @@ window.requiredRole = 'hospital';
 const hospitalId = parseInt(localStorage.getItem('userId'));
 let currentHospitalLoc = null;
 
-// Helper to get auth headers
 function authHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -300,11 +314,14 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
               <i class="fa-solid fa-diamond-turn-right"></i> Directions
             </a>
             <button class="btn btn-bb-red send-btn"
-                    data-bankid="${bank.bankId}"
-                    data-bankname="${bank.bankName}">
+              data-bankid="${bank.bankId}"
+              data-bankname="${bank.bankName}"
+              data-bankphone="${bank.phone || ''}">
               Send Requisition
             </button>
-            ${bank.phone ? `<a href="tel:${bank.phone}" class="text-muted small text-decoration-none"><i class="fa-solid fa-phone text-danger me-1"></i>${bank.phone}</a>` : ''}
+            ${bank.phone ? `
+            <a href="tel:${bank.phone}" class="btn-call"><i class="fa-solid fa-phone"></i> Call</a>
+            ` : ''}
           </div>
         </div>
       </div>`;
@@ -339,6 +356,17 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
           document.getElementById('confirmReqId').textContent = result.requestId;
           document.getElementById('confirmBank').textContent = bankName;
           document.getElementById('slipLink').href = `requisition.html?id=${result.requestId}`;
+
+          // Show phone number with a red call button in success panel
+          const phone = this.dataset.bankphone;
+          const phoneDisplay = document.getElementById('confirmPhone');
+          if (phoneDisplay) {
+            phoneDisplay.innerHTML = phone
+              ? `<span class="me-2">Phone: ${phone}</span>
+                 <a href="tel:${phone}" class="btn-call"><i class="fa-solid fa-phone"></i> Call</a>`
+              : '';
+          }
+
           startPendingRequestTimer(result.requestId);
         } else {
           alert('Failed: ' + (result.error || 'unknown error'));
@@ -405,6 +433,7 @@ function reset() {
   }
   document.getElementById('tryAnotherBankBtn').style.display = 'none';
   document.getElementById('confirmTimer').textContent = '';
+  document.getElementById('confirmPhone').innerHTML = '';
 }
 </script>
 </body>
