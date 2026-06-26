@@ -89,23 +89,36 @@ console.log("NO MATCH FOUND FOR:", key);
   // Coordinate resolution (real API data first, demo fallback second)
   // --------------------------------------------------------------------
   function resolveBankCoords(bank) {
-    var realLat = bank.latitude != null ? bank.latitude
-                : bank.lat != null ? bank.lat
-                : bank.bank_lat != null ? bank.bank_lat
-                : null;
-    var realLng = bank.longitude != null ? bank.longitude
-                : bank.lng != null ? bank.lng
-                : bank.lon != null ? bank.lon
-                : bank.bank_lng != null ? bank.bank_lng
-                : null;
-
-    if (realLat != null && realLng != null && realLat !== 0 && realLng !== 0) {
-        return { lat: realLat, lng: realLng, isDemo: false };
-    }
+    console.log("BANK OBJECT:", bank);
 
     var demo = getDemoCoordsForBank(bank);
-    return { lat: demo.lat, lng: demo.lng, isDemo: true };
-  } 
+
+    if (demo) {
+        console.log("Using demo coordinates for:", bank.bankName);
+        return {
+            lat: demo.lat,
+            lng: demo.lng,
+            isDemo: true
+        };
+    }
+
+    var lat = bank.latitude != null ? bank.latitude
+            : bank.lat != null ? bank.lat
+            : bank.bank_lat != null ? bank.bank_lat
+            : null;
+
+    var lng = bank.longitude != null ? bank.longitude
+            : bank.lng != null ? bank.lng
+            : bank.lon != null ? bank.lon
+            : bank.bank_lng != null ? bank.bank_lng
+            : null;
+
+    return {
+        lat: lat,
+        lng: lng,
+        isDemo: false
+    };
+}
   // --------------------------------------------------------------------
   // Haversine distance calculation (returns kilometers)
   // --------------------------------------------------------------------
@@ -255,6 +268,41 @@ console.log("NO MATCH FOUND FOR:", key);
   }
 
   // --------------------------------------------------------------------
+  // Pending-request countdown timer
+  // --------------------------------------------------------------------
+  // Starts a 2-minute (120s) countdown for a newly-sent request. Calls
+  // onTick(secondsLeft) every second, and onExpire() once when time runs
+  // out. Returns a handle with a stop() method to clear the interval
+  // (e.g. when the user navigates away or starts a new request).
+  function startPendingTimer(onTick, onExpire) {
+    var totalSeconds = 120;
+    var secondsLeft = totalSeconds;
+
+    function tick() {
+      if (typeof onTick === 'function') onTick(secondsLeft);
+      if (secondsLeft <= 0) {
+        clearInterval(intervalId);
+        if (typeof onExpire === 'function') onExpire();
+        return;
+      }
+      secondsLeft--;
+    }
+
+    tick(); // immediate first tick so the UI shows 2:00 right away
+    var intervalId = setInterval(tick, 1000);
+
+    return {
+      stop: function () { clearInterval(intervalId); }
+    };
+  }
+
+  function formatMmSs(totalSeconds) {
+    var m = Math.floor(totalSeconds / 60);
+    var s = totalSeconds % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  // --------------------------------------------------------------------
   // Public API used by hospital.html
   // --------------------------------------------------------------------
   window.BBHospital = {
@@ -263,6 +311,8 @@ console.log("NO MATCH FOUND FOR:", key);
     haversineDistanceKm: haversineDistanceKm,
     buildDirectionsUrl: buildDirectionsUrl,
     initMap: initMap,
-    plotBanks: plotBanks
+    plotBanks: plotBanks,
+    startPendingTimer: startPendingTimer,
+    formatMmSs: formatMmSs
   };
 })();

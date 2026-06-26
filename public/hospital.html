@@ -200,9 +200,13 @@ window.requiredRole = 'hospital';
         <h3>Requisition Sent!</h3>
         <p>Request ID: <strong id="confirmReqId"></strong></p>
         <p>Bank: <strong id="confirmBank"></strong></p>
+        <p id="confirmTimer" class="bb-sub mb-2"></p>
         <a id="slipLink" href="#" target="_blank" class="btn btn-bb-red me-2">View Slip</a>
         <a href="hospital_status.html" class="btn btn-bb-ghost">Track Status</a>
         <button id="newRequestBtn" class="btn btn-link d-block mx-auto mt-3">Make another request</button>
+        <button id="tryAnotherBankBtn" class="btn btn-bb-red d-block mx-auto mt-2" style="display:none;">
+          <i class="fa-solid fa-rotate me-1"></i> Try another bank
+        </button>
       </div>
     </div>
   </div>
@@ -291,7 +295,7 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
           <div class="bank-units ${bank.unitsAvailable <= 3 ? 'low' : ''}">
             ${bank.unitsAvailable}<small> units</small>
           </div>
-          <div class="d-flex gap-2 flex-wrap">
+          <div class="d-flex gap-2 flex-wrap align-items-center">
             <a class="btn btn-bb-ghost" href="${directionsUrl}" target="_blank" rel="noopener">
               <i class="fa-solid fa-diamond-turn-right"></i> Directions
             </a>
@@ -300,6 +304,7 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
                     data-bankname="${bank.bankName}">
               Send Requisition
             </button>
+            ${bank.phone ? `<a href="tel:${bank.phone}" class="text-muted small text-decoration-none"><i class="fa-solid fa-phone text-danger me-1"></i>${bank.phone}</a>` : ''}
           </div>
         </div>
       </div>`;
@@ -308,6 +313,7 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
 
   document.getElementById('resultsSection').style.display = 'block';
 
+  // Add event listeners for Send buttons
   document.querySelectorAll('.send-btn').forEach(btn => {
     btn.addEventListener('click', async function() {
       const bankId = parseInt(this.dataset.bankid);
@@ -333,6 +339,7 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
           document.getElementById('confirmReqId').textContent = result.requestId;
           document.getElementById('confirmBank').textContent = bankName;
           document.getElementById('slipLink').href = `requisition.html?id=${result.requestId}`;
+          startPendingRequestTimer(result.requestId);
         } else {
           alert('Failed: ' + (result.error || 'unknown error'));
           this.disabled = false;
@@ -348,15 +355,56 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
   });
 }
 
+// ---------- Timer for "Try another bank" ----------
+let activeTimerHandle = null;
+
+function startPendingRequestTimer(requestId) {
+  if (activeTimerHandle) activeTimerHandle.stop();
+
+  const timerEl = document.getElementById('confirmTimer');
+  const tryAnotherBtn = document.getElementById('tryAnotherBankBtn');
+  tryAnotherBtn.style.display = 'none';
+
+  activeTimerHandle = BBHospital.startPendingTimer(
+    function onTick(secondsLeft) {
+      timerEl.textContent = secondsLeft > 0
+        ? `Waiting for acknowledgement… ${BBHospital.formatMmSs(secondsLeft)}`
+        : '';
+    },
+    async function onExpire() {
+      try {
+        const res = await fetch(`/api/hospital/request/${requestId}`);
+        const req = await res.json();
+        if (req && req.status === 'Pending') {
+          timerEl.textContent = 'Still waiting for this blood bank.';
+          tryAnotherBtn.style.display = 'block';
+        } else {
+          timerEl.textContent = '';
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  );
+}
+
+// Reset everything
 document.getElementById('newRequestNo')?.addEventListener('click', reset);
 document.getElementById('newRequestBtn')?.addEventListener('click', reset);
+document.getElementById('tryAnotherBankBtn')?.addEventListener('click', reset);
+
 function reset() {
   document.getElementById('resultsSection').style.display = 'none';
   document.getElementById('noResults').style.display = 'none';
   document.getElementById('successPanel').style.display = 'none';
   document.getElementById('units').value = 1;
   document.getElementById('bloodGroup').value = '';
-  if (typeof BBHospital.resetMap === 'function') BBHospital.resetMap();
+  if (activeTimerHandle) {
+    activeTimerHandle.stop();
+    activeTimerHandle = null;
+  }
+  document.getElementById('tryAnotherBankBtn').style.display = 'none';
+  document.getElementById('confirmTimer').textContent = '';
 }
 </script>
 </body>

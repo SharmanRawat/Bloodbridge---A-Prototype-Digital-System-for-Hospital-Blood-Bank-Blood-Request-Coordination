@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../database');
 const { requireRole } = require('../middleware/auth');
 
-// Get incoming requests for a bank (protected + ownership)
+// Get incoming requests (protected + ownership)
 router.get('/requests/:bankId', requireRole('bloodbank'), (req, res) => {
   if (parseInt(req.params.bankId) !== req.userId) {
     return res.status(403).json({ error: 'Access denied' });
@@ -18,33 +18,41 @@ router.get('/requests/:bankId', requireRole('bloodbank'), (req, res) => {
   res.json(requests);
 });
 
-// Acknowledge a request (protected + ownership of request)
+// Acknowledge (protected + ownership + cancel competing requests)
 router.put('/request/:id/acknowledge', requireRole('bloodbank'), (req, res) => {
-  // Verify request belongs to this bank
-  const reqRow = db.prepare('SELECT blood_bank_id FROM request WHERE id = ?').get(req.params.id);
-  if (!reqRow || reqRow.blood_bank_id !== req.userId) {
+  const request = db.prepare('SELECT id, blood_bank_id, hospital_id, blood_group FROM request WHERE id = ?').get(req.params.id);
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+  if (request.blood_bank_id !== req.userId) {
     return res.status(403).json({ error: 'Access denied' });
   }
-  db.prepare('UPDATE request SET status = ? WHERE id = ?').run('Acknowledged', req.params.id);
+
+  // Transaction: acknowledge + cancel competitors
+  const acknowledgeStmt = db.prepare('UPDATE request SET status = ? WHERE id = ?');
+  const cancelStmt = db.prepare(`
+    UPDATE request
+    SET status = 'Cancelled'
+    WHERE hospital_id = ? AND blood_group = ? AND id <> ? AND status = 'Pending'
+  `);
+
+  db.transaction(() => {
+    acknowledgeStmt.run('Acknowledged', req.params.id);
+    cancelStmt.run(request.hospital_id, request.blood_group, req.params.id);
+  })();
+
   res.json({ success: true, message: 'Request acknowledged' });
 });
 
-// Get inventory for a bank (protected + ownership)
+// Inventory (protected + ownership)
 router.get('/inventory/:bankId', requireRole('bloodbank'), (req, res) => {
-  if (parseInt(req.params.bankId) !== req.userId) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
+  if (parseInt(req.params.bankId) !== req.userId) return res.status(403).json({ error: 'Access denied' });
   const inventory = db.prepare('SELECT blood_group, units, last_updated FROM inventory WHERE blood_bank_id = ?').all(req.params.bankId);
   res.json(inventory);
 });
 
-// Update inventory (protected + ownership)
 router.put('/inventory/:bankId', requireRole('bloodbank'), (req, res) => {
-  if (parseInt(req.params.bankId) !== req.userId) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
+  if (parseInt(req.params.bankId) !== req.userId) return res.status(403).json({ error: 'Access denied' });
   const { bloodGroup, units } = req.body;
-  const safeUnits = Math.max(0, units); // prevent negative
+  const safeUnits = Math.max(0, units);
   const existing = db.prepare('SELECT id FROM inventory WHERE blood_bank_id = ? AND blood_group = ?').get(req.params.bankId, bloodGroup);
   if (existing) {
     db.prepare('UPDATE inventory SET units = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?').run(safeUnits, existing.id);

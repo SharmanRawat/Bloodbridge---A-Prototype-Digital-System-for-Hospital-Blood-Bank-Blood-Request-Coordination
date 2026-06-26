@@ -26,7 +26,8 @@ app.post('/api/hospital/request', (req, res) => {
   if (!hospital) return res.status(404).json({ error: 'Hospital not found' });
 
   const banks = db.prepare(`
-    SELECT b.id AS bankId, b.name AS bankName, b.lat, b.lng, i.units AS unitsAvailable
+    SELECT b.id AS bankId, b.name AS bankName, b.lat, b.lng, b.phone,
+           i.units AS unitsAvailable
     FROM blood_bank b
     JOIN inventory i ON b.id = i.blood_bank_id
     WHERE i.blood_group = ? AND i.units > 0
@@ -37,6 +38,7 @@ app.post('/api/hospital/request', (req, res) => {
     bankName: bank.bankName,
     lat: bank.lat,
     lng: bank.lng,
+    phone: bank.phone,
     distance: getDistance(hospital.lat, hospital.lng, bank.lat, bank.lng),
     unitsAvailable: bank.unitsAvailable
   })).sort((a, b) => a.distance - b.distance);
@@ -51,44 +53,47 @@ app.post('/api/hospital/request', (req, res) => {
 app.post('/api/hospital/request/confirm', requireRole('hospital'), (req, res) => {
   const { hospitalId, bloodGroup, units, urgency = 'Normal', bankId } = req.body;
 
-  // Ownership check: hospitalId in body must match logged-in user
+  // Ownership check
   if (hospitalId !== req.userId) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  // Validate and sanitize units
   const safeUnits = Number.isInteger(units) && units > 0 ? units : 1;
 
-  // Check stock availability
-  const stockRow = db.prepare(
-    'SELECT units FROM inventory WHERE blood_bank_id = ? AND blood_group = ?'
-  ).get(bankId, bloodGroup);
-
-  if (!stockRow || stockRow.units < safeUnits) {
-    return res.status(400).json({ error: 'Not enough stock available' });
-  }
-
-  // Insert the request
-  const result = db.prepare(`
+  // Transaction: cancel previous pending + insert + deduct stock
+  const cancelPrevious = db.prepare(`
+    UPDATE request
+    SET status = 'Cancelled'
+    WHERE hospital_id = ? AND blood_group = ? AND status = 'Pending'
+  `);
+  const insertRequest = db.prepare(`
     INSERT INTO request (hospital_id, blood_group, units, urgency, blood_bank_id)
     VALUES (?, ?, ?, ?, ?)
-  `).run(hospitalId, bloodGroup, safeUnits, urgency, bankId);
-  const requestId = result.lastInsertRowid;
-
-  // Deduct stock
-  const updateResult = db.prepare(`
+  `);
+  const updateInventory = db.prepare(`
     UPDATE inventory
     SET units = units - ?, last_updated = CURRENT_TIMESTAMP
     WHERE blood_bank_id = ? AND blood_group = ? AND units >= ?
-  `).run(safeUnits, bankId, bloodGroup, safeUnits);
+  `);
 
-  if (updateResult.changes === 0) {
-    // Rollback request insertion
-    db.prepare('DELETE FROM request WHERE id = ?').run(requestId);
-    return res.status(500).json({ error: 'Stock changed, please try again' });
+  try {
+    const requestId = db.transaction(() => {
+      cancelPrevious.run(hospitalId, bloodGroup);
+      const result = insertRequest.run(hospitalId, bloodGroup, safeUnits, urgency, bankId);
+      const updateResult = updateInventory.run(safeUnits, bankId, bloodGroup, safeUnits);
+      if (updateResult.changes === 0) {
+        throw new Error('INSUFFICIENT_STOCK');
+      }
+      return result.lastInsertRowid;
+    })();
+    res.json({ success: true, requestId });
+  } catch (err) {
+    if (err.message === 'INSUFFICIENT_STOCK') {
+      return res.status(400).json({ error: 'Not enough stock available' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
   }
-
-  res.json({ success: true, requestId });
 });
 
 // ---- Get all requests for a hospital (protected + ownership) ----
