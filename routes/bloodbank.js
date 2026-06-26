@@ -20,14 +20,19 @@ router.get('/requests/:bankId', requireRole('bloodbank'), (req, res) => {
 
 // Acknowledge (protected + ownership + cancel competing requests)
 router.put('/request/:id/acknowledge', requireRole('bloodbank'), (req, res) => {
+  // Verify request belongs to this bank
   const request = db.prepare('SELECT id, blood_bank_id, hospital_id, blood_group FROM request WHERE id = ?').get(req.params.id);
   if (!request) return res.status(404).json({ error: 'Request not found' });
   if (request.blood_bank_id !== req.userId) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  // Transaction: acknowledge + cancel competitors
-  const acknowledgeStmt = db.prepare('UPDATE request SET status = ? WHERE id = ?');
+  // Generate a cryptographically random 4‑digit OTP
+  const crypto = require('crypto');
+  const otp = crypto.randomInt(1000, 9999).toString();
+
+  // Transaction: acknowledge + set OTP + cancel competing requests
+  const acknowledgeStmt = db.prepare('UPDATE request SET status = ?, pickup_otp = ? WHERE id = ?');
   const cancelStmt = db.prepare(`
     UPDATE request
     SET status = 'Cancelled'
@@ -35,11 +40,30 @@ router.put('/request/:id/acknowledge', requireRole('bloodbank'), (req, res) => {
   `);
 
   db.transaction(() => {
-    acknowledgeStmt.run('Acknowledged', req.params.id);
+    acknowledgeStmt.run('Acknowledged', otp, req.params.id);
     cancelStmt.run(request.hospital_id, request.blood_group, req.params.id);
   })();
 
-  res.json({ success: true, message: 'Request acknowledged' });
+  res.json({ success: true, message: 'Request acknowledged', pickupOtp: otp });
+});
+
+router.post('/request/:id/verify-pickup', requireRole('bloodbank'), (req, res) => {
+  const { otp } = req.body;
+  const request = db.prepare('SELECT id, blood_bank_id, pickup_otp, status FROM request WHERE id = ?').get(req.params.id);
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+  if (request.blood_bank_id !== req.userId) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  if (request.status !== 'Acknowledged') {
+    return res.status(400).json({ error: 'Request is not in acknowledged state' });
+  }
+  if (request.pickup_otp !== otp) {
+    return res.status(400).json({ success: false, message: 'Invalid OTP' });
+  }
+
+  // Optionally mark pickup as verified (add a status or a new column)
+  db.prepare("UPDATE request SET status = 'Ready' WHERE id = ?").run(req.params.id);
+  res.json({ success: true, message: 'Pickup verified' });
 });
 
 // Inventory (protected + ownership)

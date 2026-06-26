@@ -26,9 +26,12 @@
   .status-badge{padding:0.35rem 0.75rem;border-radius:20px;font-weight:600;font-size:0.8rem;}
   .status-pending{background:#fff3cd;color:#856404;}
   .status-acknowledged{background:#d4edda;color:#155724;}
+  .status-cancelled{background:#e9ecef;color:#6c757d;}
   .btn-bb-red{background:var(--bb-red);color:white;font-weight:600;border-radius:10px;padding:0.5rem 1rem;border:none;}
   .btn-bb-red:hover{background:#9b1c1c;color:white;}
   .bb-page{padding-top:80px;}
+  .otp-box{background:#d4edda;border:1px solid #c3e6cb;border-radius:10px;padding:1rem;text-align:center;}
+  .otp-value{font-size:2rem;font-weight:800;letter-spacing:0.15em;color:#155724;}
 </style>
 </head>
 <body>
@@ -97,7 +100,7 @@ window.requiredRole = 'hospital';
 })();
 </script>
 
-<!-- Status fetch script (with auth headers) -->
+<!-- Status fetch script -->
 <script>
 const hospitalId = parseInt(localStorage.getItem('userId'));
 
@@ -133,8 +136,14 @@ async function loadStatus() {
                         <p class="mb-1">Blood Bank: ${req.bank_name || 'N/A'}</p>
                         <small class="text-muted">${new Date(req.created_at).toLocaleString()}</small>
                     </div>
-                    <span class="status-badge ${req.status === 'Pending' ? 'status-pending' : 'status-acknowledged'}">${req.status}</span>
+                    <span class="status-badge ${req.status === 'Pending' ? 'status-pending' : req.status === 'Cancelled' ? 'status-cancelled' : 'status-acknowledged'}">${req.status}</span>
                 </div>
+                ${req.status === 'Acknowledged' && req.pickup_otp ? `
+                <div class="otp-box mt-3">
+                    <strong>Pickup OTP:</strong>
+                    <div class="otp-value">${req.pickup_otp}</div>
+                    <small class="text-muted">Share this code with the person collecting the blood</small>
+                </div>` : ''}
                 <div class="mt-2">
                     <a href="requisition.html?id=${req.id}" class="btn btn-sm btn-outline-secondary">View Slip</a>
                 </div>

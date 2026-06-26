@@ -178,6 +178,7 @@ let inventoryData = [];
 
 // ----- 4. Load incoming requests -----
 async function loadRequests() {
+  const bankId = parseInt(localStorage.getItem('userId'));  // already defined
   try {
     const res = await fetch(`/api/bloodbank/requests/${bankId}`, {
       headers: authHeaders()
@@ -196,16 +197,46 @@ async function loadRequests() {
             <p class="mb-1 text-muted">Hospital: ${req.hospital_name} | Units: ${req.units} | Urgency: ${req.urgency}</p>
             <small>${new Date(req.created_at).toLocaleString()}</small>
           </div>
-          <span class="badge bg-${req.status === 'Pending' ? 'warning' : 'success'}">${req.status}</span>
+          <span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Cancelled' ? 'secondary' : 'success'}">${req.status}</span>
         </div>
         ${req.status === 'Pending' ? `
           <button class="btn btn-sm btn-success mt-2" onclick="acknowledgeRequest(${req.id})">Acknowledge</button>
         ` : ''}
+        ${req.status === 'Acknowledged' ? `
+          <div class="mt-2">
+            <input type="text" id="otpInput${req.id}" placeholder="Enter OTP" class="form-control form-control-sm d-inline-block w-auto" style="max-width:150px;">
+            <button class="btn btn-sm btn-bb-red ms-1" onclick="verifyPickup(${req.id})">Verify Pickup</button>
+            <span id="verifyMsg${req.id}" class="ms-2"></span>
+          </div>` : ''}
       </div>
     `).join('');
   } catch (err) {
     console.error(err);
     document.getElementById('requestsList').innerHTML = '<div class="alert alert-danger">Failed to load requests.</div>';
+  }
+}
+
+//---- verify request ----//
+async function verifyPickup(requestId) {
+  const otp = document.getElementById(`otpInput${requestId}`).value.trim();
+  if (!otp) return alert('Please enter the OTP.');
+  try {
+    const res = await fetch(`/api/bloodbank/request/${requestId}/verify-pickup`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ otp })
+    });
+    const data = await res.json();
+    const msgEl = document.getElementById(`verifyMsg${requestId}`);
+    if (data.success) {
+      msgEl.innerHTML = '<span class="text-success">✅ Pickup Verified</span>';
+      setTimeout(loadRequests, 2000);  // refresh to show updated status
+    } else {
+      msgEl.innerHTML = '<span class="text-danger">❌ Invalid OTP</span>';
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Verification failed.');
   }
 }
 

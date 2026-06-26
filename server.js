@@ -101,9 +101,10 @@ app.get('/api/hospital/requests/:hospitalId', requireRole('hospital'), (req, res
   if (parseInt(req.params.hospitalId) !== req.userId) {
     return res.status(403).json({ error: 'Access denied' });
   }
-
   const requests = db.prepare(`
-    SELECT r.id, r.blood_group, r.units, r.urgency, r.status, r.created_at, b.name AS bank_name
+    SELECT r.id, r.blood_group, r.units, r.urgency, r.status, r.created_at,
+           r.pickup_otp,                       -- <-- ADD THIS
+           b.name AS bank_name
     FROM request r
     LEFT JOIN blood_bank b ON r.blood_bank_id = b.id
     WHERE r.hospital_id = ?
