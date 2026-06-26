@@ -99,6 +99,17 @@
       document.getElementById('errorMsg').style.display = 'block';
     }
   });
+
+  // ----- Pre-fill role from index page buttons -----
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get('role');
+    if (roleParam === 'hospital' || roleParam === 'bloodbank') {
+      const roleSelect = document.getElementById('role');
+      roleSelect.value = roleParam;
+      roleSelect.disabled = true;   // user cannot change it
+    }
+  })();
 </script>
 </body>
 </html>
