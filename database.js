@@ -42,17 +42,22 @@ db.exec(`
     status TEXT DEFAULT 'Pending' CHECK(status IN ('Pending','Acknowledged','Ready','Cancelled')),
     blood_bank_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    pickup_otp TEXT DEFAULT NULL,
     FOREIGN KEY (hospital_id) REFERENCES hospital(id),
     FOREIGN KEY (blood_bank_id) REFERENCES blood_bank(id)
   );
 `);
 
 // Migration: add phone column to blood_bank if the table already existed
-// before this column was introduced (CREATE TABLE IF NOT EXISTS above
-// won't add columns to a pre-existing table).
 const bankColumns = db.prepare("PRAGMA table_info(blood_bank)").all();
 if (!bankColumns.some(col => col.name === 'phone')) {
   db.exec('ALTER TABLE blood_bank ADD COLUMN phone TEXT');
+}
+
+// Migration: add pickup_otp column to request if the table already existed
+const requestColumns = db.prepare("PRAGMA table_info(request)").all();
+if (!requestColumns.some(col => col.name === 'pickup_otp')) {
+  db.exec('ALTER TABLE request ADD COLUMN pickup_otp TEXT DEFAULT NULL');
 }
 
 // Seed data only if no blood banks exist
@@ -90,8 +95,6 @@ db.prepare("UPDATE hospital SET password = 'hospital123' WHERE password IS NULL"
 db.prepare("UPDATE blood_bank SET password = 'bank123' WHERE password IS NULL").run();
 
 // Backfill a placeholder phone number for any pre-existing blood banks
-// that don't have one yet (e.g. databases created before this column
-// was added), so the UI never shows a blank phone field.
 db.prepare("UPDATE blood_bank SET phone = '9876500000' WHERE phone IS NULL OR phone = ''").run();
 
 console.log('Database setup complete');
