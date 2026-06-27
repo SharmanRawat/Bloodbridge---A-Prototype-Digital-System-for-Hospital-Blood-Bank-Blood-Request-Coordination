@@ -155,30 +155,98 @@ window.requiredRole = 'hospital';
         </div>
 
         <form id="requestForm" class="row g-3">
+      <!-- Blood group, units, urgency row -->
+      <div class="col-md-4">
+        <label class="bb-label"><i class="fa-solid fa-droplet"></i> Blood Group</label>
+        <select id="bloodGroup" class="form-select" required>
+          <option value="">Select</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label"><i class="fa-solid fa-prescription-bottle-medical"></i> Units</label>
+        <input id="units" type="number" min="1" max="20" value="1" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label"><i class="fa-regular fa-clock"></i> Urgency</label>
+        <select id="urgency" class="form-select">
+          <option value="Normal">Normal</option>
+          <option value="Emergency">Emergency</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-bb-red w-100">
+          <i class="fa-solid fa-magnifying-glass me-1"></i> Search
+        </button>
+      </div>
+
+      <div class="col-12"><hr></div>
+      <div class="col-md-4">
+        <label class="bb-label">Patient Full Name <span class="text-danger">*</span></label>
+        <input id="patientName" class="form-control" placeholder="Full name" required>
+      </div>
+      <div class="col-md-2">
+        <label class="bb-label">Age / Sex <span class="text-danger">*</span></label>
+        <input id="patientAgeSex" class="form-control" placeholder="45 / Male" required>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label">Ward / Bed No <span class="text-danger">*</span></label>
+        <input id="ward" class="form-control" placeholder="ICU-2" required>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label">Indoor / Reg No</label>
+        <input id="regNo" class="form-control" placeholder="IPD-2026-0451">
+      </div>
+      <div class="col-md-4">
+        <label class="bb-label">Doctor Name <span class="text-danger">*</span></label>
+        <input id="doctorName" class="form-control" placeholder="Dr. Mehta" required>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label">Contact No</label>
+        <input id="contactNo" class="form-control" placeholder="9876543210">
+      </div>
+      <div class="col-md-5">
+        <label class="bb-label">Diagnosis <span class="text-danger">*</span></label>
+        <input id="diagnosis" class="form-control" placeholder="e.g., Severe anemia" required>
+      </div>
+      <div class="col-md-4">
+        <label class="bb-label">Blood Component <span class="text-danger">*</span></label>
+        <select id="component" class="form-select" required>
+          <option value="">-- Select --</option>
+          <option value="PRBC">Packed Red Blood Cells (PRBC)</option>
+          <option value="WB">Whole Blood (WB)</option>
+          <option value="RCC-LR">RCC-LR (Buffy Coat Removal)</option>
+          <option value="RCC-LD">RCC-LD (Leucodepleted)</option>
+          <option value="PRP">Platelet Rich Plasma (PRP)</option>
+          <option value="FFP">Fresh Frozen Plasma (FFP)</option>
+          <option value="PC">Platelet Concentrate (RDP)</option>
+          <option value="Cryo">Cryoprecipitated Antihemophilic Factor</option>
+          <option value="SDP">Single Donor Platelet (SDP)</option>
+          <option value="PlasmaAph">Plasma Apheresis</option>
+        </select>
+      </div>
+                <div class="col-md-8">
+            <label class="bb-label">Specific Requirement</label>
+            <input id="specificReq" class="form-control" placeholder="e.g., Leucodepleted, Irradiated">
+          </div>
+
+          <!-- Delivery Person (Optional) -->
+          <div class="col-12">
+            <hr>
+            <p class="mb-2" style="font-weight:700;font-size:0.85rem;color:var(--bb-muted);text-transform:uppercase;letter-spacing:0.05em;">
+              <i class="fa-solid fa-motorcycle me-1" style="color:var(--bb-red)"></i> Delivery Person
+            </p>
+          </div>
           <div class="col-md-4">
-            <label class="bb-label"><i class="fa-solid fa-droplet"></i> Blood Group</label>
-            <select id="bloodGroup" class="form-select" required>
-              <option value="">Select</option>
-              <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-              <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
-            </select>
+            <label class="bb-label">Delivery Person Name</label>
+            <input id="deliveryName" class="form-control" placeholder="Rider name">
           </div>
           <div class="col-md-3">
-            <label class="bb-label"><i class="fa-solid fa-prescription-bottle-medical"></i> Units</label>
-            <input id="units" type="number" min="1" max="20" value="1" class="form-control" required>
+            <label class="bb-label">Delivery Phone</label>
+            <input id="deliveryPhone" class="form-control" placeholder="9876543210">
           </div>
-          <div class="col-md-3">
-            <label class="bb-label"><i class="fa-regular fa-clock"></i> Urgency</label>
-            <select id="urgency" class="form-select">
-              <option value="Normal">Normal</option>
-              <option value="Emergency">Emergency</option>
-            </select>
-          </div>
-          <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-bb-red w-100">
-              <i class="fa-solid fa-magnifying-glass me-1"></i> Search
-            </button>
-          </div>
+
         </form>
       </div>
     </div>
@@ -214,6 +282,7 @@ window.requiredRole = 'hospital';
         <h3>Requisition Sent!</h3>
         <p>Request ID: <strong id="confirmReqId"></strong></p>
         <p>Bank: <strong id="confirmBank"></strong></p>
+        <p id="successMessage" class="text-success fw-bold mb-2" style="display:none;"></p>
         <p><span id="confirmPhone"></span></p>
         <p id="confirmTimer" class="bb-sub mb-2"></p>
         <a id="slipLink" href="#" target="_blank" class="btn btn-bb-red me-2">View Slip</a>
@@ -337,6 +406,20 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
       const bankName = this.dataset.bankname;
       const originalHTML = this.innerHTML;
 
+      const patientName = document.getElementById('patientName').value.trim();
+      const patientAgeSex = document.getElementById('patientAgeSex').value.trim();
+      const ward = document.getElementById('ward').value.trim();
+      const doctorName = document.getElementById('doctorName').value.trim();
+      const diagnosis = document.getElementById('diagnosis').value.trim();
+      const component = document.getElementById('component').value;
+
+      if (!patientName || !patientAgeSex || !ward || !doctorName || !diagnosis || !component) {
+        alert('Please fill all mandatory patient details (marked with *).');
+        this.disabled = false;
+        this.innerHTML = originalHTML;
+        return;
+      }
+
       this.disabled = true;
       this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Sending…';
 
@@ -345,7 +428,18 @@ function displayResults(banks, bloodGroup, units, urgency, hospitalLoc) {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify({
-            hospitalId, bloodGroup, units, urgency, bankId
+            hospitalId, bloodGroup, units, urgency, bankId,
+            component: document.getElementById('component').value,
+            patient_name: document.getElementById('patientName').value,
+            patient_age_sex: document.getElementById('patientAgeSex').value,
+            ward: document.getElementById('ward').value,
+            reg_no: document.getElementById('regNo').value,
+            doctor_name: document.getElementById('doctorName').value,
+            contact_no: document.getElementById('contactNo').value,
+            diagnosis: document.getElementById('diagnosis').value,
+            specific_requirement: document.getElementById('specificReq').value,
+            delivery_name: document.getElementById('deliveryName').value,
+            delivery_phone: document.getElementById('deliveryPhone').value
           })
         });
 
@@ -391,29 +485,76 @@ function startPendingRequestTimer(requestId) {
 
   const timerEl = document.getElementById('confirmTimer');
   const tryAnotherBtn = document.getElementById('tryAnotherBankBtn');
-  tryAnotherBtn.style.display = 'none';
+  const successMessageEl = document.getElementById('successMessage');
 
-  activeTimerHandle = BBHospital.startPendingTimer(
-    function onTick(secondsLeft) {
-      timerEl.textContent = secondsLeft > 0
-        ? `Waiting for acknowledgement… ${BBHospital.formatMmSs(secondsLeft)}`
-        : '';
-    },
-    async function onExpire() {
-      try {
-        const res = await fetch(`/api/hospital/request/${requestId}`);
-        const req = await res.json();
-        if (req && req.status === 'Pending') {
-          timerEl.textContent = 'Still waiting for this blood bank.';
-          tryAnotherBtn.style.display = 'block';
-        } else {
-          timerEl.textContent = '';
+  // Reset state
+  tryAnotherBtn.style.display = 'none';
+  if (successMessageEl) successMessageEl.style.display = 'none';
+  let secondsLeft = 120;
+
+  // Countdown tick every second
+  const tickInterval = setInterval(() => {
+    timerEl.textContent = secondsLeft > 0
+      ? `Waiting for acknowledgement… ${BBHospital.formatMmSs(secondsLeft)}`
+      : '';
+    secondsLeft--;
+  }, 1000);
+
+  // Poll the request status every 5 seconds
+  const checkStatus = async () => {
+    try {
+      const res = await fetch(`/api/hospital/request/${requestId}`);
+      const req = await res.json();
+      if (req && req.status !== 'Pending') {
+        // Acknowledged or Cancelled – stop everything
+        clearInterval(tickInterval);
+        clearInterval(pollInterval);
+        clearTimeout(expirationTimeout);
+        timerEl.textContent = '';
+        tryAnotherBtn.style.display = 'none';
+        if (successMessageEl) {
+          successMessageEl.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Your request has been accepted.';
+          successMessageEl.style.display = 'block';
         }
-      } catch (err) {
-        console.error(err);
       }
+    } catch (err) {
+      console.error(err);
     }
-  );
+  };
+
+  const pollInterval = setInterval(checkStatus, 5000);
+  checkStatus(); // immediate first check
+
+  // 2‑minute expiration fallback
+  const expirationTimeout = setTimeout(async () => {
+    clearInterval(tickInterval);
+    clearInterval(pollInterval);
+    try {
+      const res = await fetch(`/api/hospital/request/${requestId}`);
+      const req = await res.json();
+      if (req && req.status === 'Pending') {
+        timerEl.textContent = 'Still waiting for this blood bank.';
+        tryAnotherBtn.style.display = 'block';
+      } else {
+        timerEl.textContent = '';
+        tryAnotherBtn.style.display = 'none';
+        if (successMessageEl) {
+          successMessageEl.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Your request has been accepted.';
+          successMessageEl.style.display = 'block';
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, 120000);
+
+  activeTimerHandle = {
+    stop: () => {
+      clearInterval(tickInterval);
+      clearInterval(pollInterval);
+      clearTimeout(expirationTimeout);
+    }
+  };
 }
 
 // Reset everything

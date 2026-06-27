@@ -51,17 +51,18 @@ router.post('/request/:id/verify-pickup', requireRole('bloodbank'), (req, res) =
   const { otp } = req.body;
   const request = db.prepare('SELECT id, blood_bank_id, pickup_otp, status FROM request WHERE id = ?').get(req.params.id);
   if (!request) return res.status(404).json({ error: 'Request not found' });
-  if (request.blood_bank_id !== req.userId) {
-    return res.status(403).json({ error: 'Access denied' });
+  if (request.blood_bank_id !== req.userId) return res.status(403).json({ error: 'Access denied' });
+
+  // Allow verification for both Acknowledged and InTransit states
+  if (!['Acknowledged', 'InTransit'].includes(request.status)) {
+    return res.status(400).json({ error: 'Request cannot be verified at this stage' });
   }
-  if (request.status !== 'Acknowledged') {
-    return res.status(400).json({ error: 'Request is not in acknowledged state' });
-  }
-  if (request.pickup_otp !== otp) {
+
+  // Trim both OTPs for safe comparison
+  if (String(request.pickup_otp).trim() !== String(otp).trim()) {
     return res.status(400).json({ success: false, message: 'Invalid OTP' });
   }
 
-  // Optionally mark pickup as verified (add a status or a new column)
   db.prepare("UPDATE request SET status = 'Ready' WHERE id = ?").run(req.params.id);
   res.json({ success: true, message: 'Pickup verified' });
 });

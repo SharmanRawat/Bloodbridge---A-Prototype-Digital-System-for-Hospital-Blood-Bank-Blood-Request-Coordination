@@ -6,155 +6,222 @@
 <title>Request Status – BloodBridge</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <style>
-  :root{
-    --bb-red:#C62828;
-    --bb-bg:#f8f9fa;
-    --bb-text:#212529;
-    --bb-muted:#6c757d;
-    --bb-border:#dee2e6;
-    --bb-radius:12px;
-  }
+  :root{ --bb-red:#C62828; --bb-bg:#f8f9fa; --bb-text:#212529; --bb-muted:#6c757d; --bb-border:#dee2e6; --bb-radius:12px; }
   body{background:var(--bb-bg);color:var(--bb-text);font-family:system-ui,-apple-system,sans-serif;}
   .bb-brand{font-weight:800;font-size:1.25rem;text-decoration:none;color:var(--bb-text);}
   .bb-brand .dot{color:var(--bb-red);}
   .navbar{background-color:#fff !important;box-shadow:0 2px 8px rgba(0,0,0,0.04);z-index:1030;}
-  .navbar .nav-link{font-weight:600;color:var(--bb-text);}
-  .navbar .nav-link:hover{color:var(--bb-red);}
-  .nav-link.active{color:var(--bb-red)!important;}
+  .navbar .nav-link{font-weight:600;color:var(--bb-text);} .navbar .nav-link:hover{color:var(--bb-red);} .nav-link.active{color:var(--bb-red)!important;}
   .bb-card{background:#fff;border:1px solid var(--bb-border);border-radius:var(--bb-radius);box-shadow:0 4px 12px rgba(0,0,0,0.03);}
   .status-badge{padding:0.35rem 0.75rem;border-radius:20px;font-weight:600;font-size:0.8rem;}
-  .status-pending{background:#fff3cd;color:#856404;}
-  .status-acknowledged{background:#d4edda;color:#155724;}
-  .status-cancelled{background:#e9ecef;color:#6c757d;}
+  .status-pending{background:#fff3cd;color:#856404;} .status-acknowledged{background:#d4edda;color:#155724;}
+  .status-cancelled{background:#e9ecef;color:#6c757d;} .status-intransit{background:#cfe2ff;color:#084298;}
+  .status-outfordelivery{background:#cfe2ff;color:#084298;} .status-delivered{background:#d1e7dd;color:#0f5132;}
   .btn-bb-red{background:var(--bb-red);color:white;font-weight:600;border-radius:10px;padding:0.5rem 1rem;border:none;}
   .btn-bb-red:hover{background:#9b1c1c;color:white;}
+  .btn-bb-outline-red{border:1px solid var(--bb-red);color:var(--bb-red);font-weight:600;border-radius:10px;padding:0.4rem 0.8rem;background:#fff;}
+  .btn-bb-outline-red:hover{background:var(--bb-red);color:white;}
   .bb-page{padding-top:80px;}
   .otp-box{background:#d4edda;border:1px solid #c3e6cb;border-radius:10px;padding:1rem;text-align:center;}
   .otp-value{font-size:2rem;font-weight:800;letter-spacing:0.15em;color:#155724;}
+  .patient-info{background:#f8f9fa;padding:0.75rem;border-radius:8px;margin-top:0.5rem;font-size:0.9rem;} .patient-info strong{color:var(--bb-text);}
+  .tracker-map{height:400px;width:100%;border-radius:10px;border:1px solid #ddd;margin-top:0.5rem;}
+  .qr-box{display:inline-flex;flex-direction:column;align-items:center;gap:0.25rem;background:#fff;border:1px solid var(--bb-border);border-radius:8px;padding:0.5rem 0.75rem;}
 </style>
 </head>
 <body>
-
-<!-- Dynamic Navbar -->
 <nav class="navbar navbar-expand-lg sticky-top">
   <div class="container">
     <a class="bb-brand" href="index.html"><span class="dot">🩸</span> BloodBridge</a>
-    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
-      <i class="fa-solid fa-bars"></i>
-    </button>
-    <div class="collapse navbar-collapse justify-content-end" id="nav">
-      <ul class="navbar-nav" id="navbarLinks">
-        <!-- filled by JS -->
-      </ul>
-    </div>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><i class="fa-solid fa-bars"></i></button>
+    <div class="collapse navbar-collapse justify-content-end" id="nav"><ul class="navbar-nav" id="navbarLinks"></ul></div>
   </div>
 </nav>
-
-<main class="bb-page">
-  <div class="container">
-    <h1 class="mb-4">Request Status</h1>
-    <div id="statusList">Loading...</div>
-  </div>
-</main>
+<main class="bb-page"><div class="container"><h1 class="mb-4">Request Status</h1><div id="statusList">Loading...</div></div></main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Auth check (requires hospital role) -->
-<script>
-window.requiredRole = 'hospital';
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>window.requiredRole = 'hospital';</script>
 <script src="auth-check.js"></script>
-
-<!-- Dynamic navbar script -->
 <script>
 (function() {
-  const role = localStorage.getItem('role');
-  const userId = localStorage.getItem('userId');
-  const nav = document.getElementById('navbarLinks');
+  const role = localStorage.getItem('role'), userId = localStorage.getItem('userId'), nav = document.getElementById('navbarLinks');
   if (!nav) return;
-
   let links = '<li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>';
-
   if (role && userId) {
-    if (role === 'hospital') {
-      links += '<li class="nav-item"><a class="nav-link" href="hospital.html">Hospital Dashboard</a></li>';
-    } else if (role === 'bloodbank') {
-      links += '<li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank Dashboard</a></li>';
-    }
+    if (role === 'hospital') links += '<li class="nav-item"><a class="nav-link" href="hospital.html">Hospital Dashboard</a></li>';
+    else if (role === 'bloodbank') links += '<li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank Dashboard</a></li>';
     links += '<li class="nav-item"><a class="nav-link" href="#" id="logoutBtn"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a></li>';
   } else {
-    links += '<li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>';
-    links += '<li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>';
+    links += '<li class="nav-item"><a class="nav-link" href="login.html">Login</a></li><li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>';
   }
   nav.innerHTML = links;
-
   const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      localStorage.clear();
-      window.location.href = 'index.html';
-    });
-  }
+  if (logoutBtn) logoutBtn.addEventListener('click', e => { e.preventDefault(); localStorage.clear(); location.href = 'index.html'; });
 })();
 </script>
 
-<!-- Status fetch script -->
 <script>
 const hospitalId = parseInt(localStorage.getItem('userId'));
+const trackerMaps = {};
+const trackerMarkers = {};
+const deliveryInfo = {};
+const socket = io();
 
 function authHeaders() {
-    return {
-        'x-user-id': localStorage.getItem('userId') || '',
-        'x-user-role': localStorage.getItem('role') || ''
-    };
+  return { 'x-user-id': localStorage.getItem('userId')||'', 'x-user-role': localStorage.getItem('role')||'' };
 }
+
+// ---- Live tracking ----
+socket.on('update_donor_pos', ({ donorId, lat, lng, requestId }) => {
+  const id = requestId || donorId;
+  const instance = trackerMaps[id];
+  if (!instance || !instance.map) return;
+  updateDonorMarker(id, lat, lng, instance.map);
+});
+
+function updateDonorMarker(requestId, lat, lng, map) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return;
+  const key = `donor_${requestId}`;
+  if (trackerMarkers[key]) {
+    trackerMarkers[key].setLatLng([lat, lng]);
+    map.panTo([lat, lng]);
+  } else {
+    const emojiIcon = L.divIcon({
+      html: '<div style="font-size:36px">🏍️</div>',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18]
+    });
+    const marker = L.marker([lat, lng], { icon: emojiIcon }).addTo(map);
+    const info = deliveryInfo[requestId];
+    const popupText = info ? `🏍️ ${info.name} · ${info.phone}` : 'Delivery person';
+    marker.bindPopup(popupText).openPopup();
+    trackerMarkers[key] = marker;
+    map.flyTo([lat, lng], 16, { duration: 1 });
+  }
+}
+
+function initTrackerMap(containerId, requestId) {
+  if (trackerMaps[requestId]) return;
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const map = L.map(container).setView([22.3072, 73.1812], 16);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+  trackerMaps[requestId] = { map };
+  socket.emit('watch_request', { requestId });
+  fetch(`/api/hospital/track-request/${requestId}`, { headers: authHeaders() })
+    .then(res => res.json())
+    .then(data => { if (data.lat && data.lng) updateDonorMarker(requestId, data.lat, data.lng, map); })
+    .catch(err => console.error('Initial tracker fetch error:', err));
+}
+
+// ---- Cancel / confirm ----
+window.cancelRequest = async function(requestId) {
+  if (!confirm('Cancel this request?')) return;
+  const res = await fetch(`/api/hospital/request/${requestId}/cancel`, { method:'PUT', headers:authHeaders() });
+  const data = await res.json();
+  if (data.success) loadStatus(); else alert('Failed: ' + (data.error||'unknown'));
+};
+window.confirmDelivery = async function(requestId) {
+  if (!confirm('Confirm blood received?')) return;
+  const res = await fetch(`/api/hospital/request/${requestId}/delivered`, { method:'PUT', headers:authHeaders() });
+  const data = await res.json();
+  if (data.success) loadStatus(); else alert('Failed: ' + (data.error||'unknown'));
+};
 
 async function loadStatus() {
-    try {
-        const res = await fetch(`/api/hospital/requests/${hospitalId}`, {
-            headers: authHeaders()
-        });
-        const data = await res.json();
-        if (!Array.isArray(data) || data.length === 0) {
-            document.getElementById('statusList').innerHTML = `
-                <div class="bb-card p-4 text-center">
-                    <i class="fa-solid fa-inbox fa-3x text-muted mb-3"></i>
-                    <h3>No requests yet</h3>
-                    <p class="text-muted">When you send a blood request, it will appear here.</p>
-                    <a href="hospital.html" class="btn btn-bb-red">Make a Request</a>
-                </div>`;
-            return;
-        }
-        document.getElementById('statusList').innerHTML = data.map(req => `
-            <div class="bb-card p-3 mb-3">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h5 class="mb-1">Request #${req.id} – ${req.blood_group}</h5>
-                        <p class="mb-1 text-muted">Units: ${req.units} | Urgency: ${req.urgency}</p>
-                        <p class="mb-1">Blood Bank: ${req.bank_name || 'N/A'}</p>
-                        <small class="text-muted">${new Date(req.created_at).toLocaleString()}</small>
-                    </div>
-                    <span class="status-badge ${req.status === 'Pending' ? 'status-pending' : req.status === 'Cancelled' ? 'status-cancelled' : 'status-acknowledged'}">${req.status}</span>
-                </div>
-                ${req.status === 'Acknowledged' && req.pickup_otp ? `
-                <div class="otp-box mt-3">
-                    <strong>Pickup OTP:</strong>
-                    <div class="otp-value">${req.pickup_otp}</div>
-                    <small class="text-muted">Share this code with the person collecting the blood</small>
-                </div>` : ''}
-                <div class="mt-2">
-                    <a href="requisition.html?id=${req.id}" class="btn btn-sm btn-outline-secondary">View Slip</a>
-                </div>
-            </div>
-        `).join('');
-    } catch (err) {
-        document.getElementById('statusList').innerHTML = `<div class="alert alert-danger">Failed to load requests.</div>`;
-        console.error(err);
+  try {
+    const res = await fetch(`/api/hospital/requests/${hospitalId}`, { headers:authHeaders() });
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length===0) {
+      document.getElementById('statusList').innerHTML = '<div class="bb-card p-4 text-center"><i class="fa-solid fa-inbox fa-3x text-muted mb-3"></i><h3>No requests yet</h3><p class="text-muted">Send a blood request to see it here.</p><a href="hospital.html" class="btn btn-bb-red">Make a Request</a></div>';
+      return;
     }
-}
 
+    // Save existing map containers for InTransit/OutForDelivery
+    const savedContainers = {};
+    Object.keys(trackerMaps).forEach(id => {
+      const container = document.getElementById(`trackerMap${id}`);
+      if (container) { savedContainers[id] = container; container.remove(); }
+    });
+
+    document.getElementById('statusList').innerHTML = data.map(req => {
+      const statusClass = {
+        'Pending':'status-pending', 'Acknowledged':'status-acknowledged', 'Cancelled':'status-cancelled',
+        'InTransit':'status-intransit', 'OutForDelivery':'status-outfordelivery', 'Delivered':'status-delivered'
+      }[req.status]||'';
+      let trackerHtml = '';
+      if (req.status === 'InTransit' || req.status === 'OutForDelivery') {
+        if (trackerMaps[req.id]) {
+          trackerHtml = `<div id="trackerPlaceholder${req.id}" class="tracker-map"></div><small class="text-muted">📍 Live delivery route</small>`;
+        } else {
+          trackerHtml = `<div class="tracker-map" id="trackerMap${req.id}"></div><small class="text-muted">📍 Live delivery route</small>`;
+        }
+      }
+      let actionButtons = '';
+      if (['Pending','Acknowledged','InTransit','OutForDelivery'].includes(req.status)) actionButtons += `<button class="btn btn-sm btn-bb-outline-red ms-1" onclick="cancelRequest(${req.id})">Cancel</button>`;
+      if (req.status==='InTransit' || req.status==='OutForDelivery') actionButtons += `<button class="btn btn-sm btn-bb-red ms-1" onclick="confirmDelivery(${req.id})">Confirm Delivery</button>`;
+      const qrHtml = (req.status==='InTransit'||req.status==='Acknowledged') ? `
+        <div class="mt-2"><div class="qr-box"><small>📱 Scan to start delivery</small><div id="qr${req.id}"></div></div></div>` : '';
+      return `
+        <div class="bb-card p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-start"><div class="w-100">
+            <h5 class="mb-1">Request #${req.id} – ${req.blood_group}</h5>
+            <p class="mb-1 text-muted">Units: ${req.units} | Urgency: ${req.urgency}</p>
+            <p class="mb-1">Blood Bank: ${req.bank_name||'N/A'}</p>
+            ${req.patient_name?`<div class="patient-info"><strong>Patient:</strong> ${req.patient_name} (${req.patient_age_sex||''})<br><strong>Ward/Reg:</strong> ${req.ward||'N/A'} / ${req.reg_no||'N/A'}<br><strong>Doctor:</strong> ${req.doctor_name||'N/A'} | <strong>Contact:</strong> ${req.contact_no||'N/A'}<br><strong>Diagnosis:</strong> ${req.diagnosis||'N/A'}<br><strong>Component:</strong> ${req.component||'PRBC'} ${req.specific_requirement?'('+req.specific_requirement+')':''}</div>`:''}
+            ${req.delivery_name ? `<p class="mb-1 mt-1"><strong>🏍️ Rider:</strong> ${req.delivery_name} (${req.delivery_phone||'N/A'})</p>` : ''}
+            <small class="text-muted">${new Date(req.created_at).toLocaleString()}</small>
+          </div><span class="status-badge ${statusClass}">${req.status}</span></div>
+          ${req.status==='Acknowledged'&&req.pickup_otp?`<div class="otp-box mt-3"><strong>Pickup OTP:</strong><div class="otp-value">${req.pickup_otp}</div><small class="text-muted">Share this code with the collection person</small></div>`:''}
+          ${qrHtml}${trackerHtml}
+          <div class="mt-2"><a href="requisition.html?id=${req.id}" class="btn btn-sm btn-outline-secondary">View Slip</a>${actionButtons}</div>
+        </div>`;
+    }).join('');
+
+    // Re-attach saved map containers
+    Object.keys(savedContainers).forEach(id => {
+      const placeholder = document.getElementById(`trackerPlaceholder${id}`);
+      if (placeholder && savedContainers[id]) {
+        placeholder.appendChild(savedContainers[id]);
+        if (trackerMaps[id]?.map) trackerMaps[id].map.invalidateSize();
+      }
+    });
+
+    // Remove maps only for requests that are no longer InTransit/OutForDelivery
+    Object.keys(trackerMaps).forEach(id => {
+      const stillActive = data.find(req => req.id == id && (req.status === 'InTransit' || req.status === 'OutForDelivery'));
+      if (!stillActive) {
+        if (trackerMaps[id].map) trackerMaps[id].map.remove();
+        delete trackerMaps[id];
+        const markerKey = `donor_${id}`;
+        if (trackerMarkers[markerKey]) delete trackerMarkers[markerKey];
+      }
+    });
+
+    // Generate QR codes & initialize new maps
+    data.forEach(req => {
+      if (req.delivery_name) deliveryInfo[req.id] = { name: req.delivery_name, phone: req.delivery_phone||'N/A' };
+      if ((req.status==='InTransit'||req.status==='Acknowledged') && document.getElementById(`qr${req.id}`) && document.getElementById(`qr${req.id}`).childElementCount===0) {
+        new QRCode(document.getElementById(`qr${req.id}`), { text: `${location.origin}/track-delivery.html?id=${req.id}`, width:80, height:80 });
+      }
+      if ((req.status==='InTransit' || req.status==='OutForDelivery') && !trackerMaps[req.id] && document.getElementById(`trackerMap${req.id}`)) {
+        initTrackerMap(`trackerMap${req.id}`, req.id);
+      }
+    });
+  } catch (err) {
+    document.getElementById('statusList').innerHTML = '<div class="alert alert-danger">Failed to load requests.</div>';
+    console.error(err);
+  }
+}
 loadStatus();
 setInterval(loadStatus, 10000);
 </script>

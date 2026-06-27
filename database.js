@@ -39,10 +39,22 @@ db.exec(`
     blood_group TEXT,
     units INTEGER,
     urgency TEXT CHECK(urgency IN ('Normal','Emergency')),
-    status TEXT DEFAULT 'Pending' CHECK(status IN ('Pending','Acknowledged','Ready','Cancelled')),
+    status TEXT DEFAULT 'Pending' CHECK(status IN ('Pending','Acknowledged','Cancelled','InTransit','Delivered','Ready')),
     blood_bank_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     pickup_otp TEXT DEFAULT NULL,
+    component TEXT DEFAULT 'PRBC',
+    patient_name TEXT DEFAULT NULL,
+    patient_age_sex TEXT DEFAULT NULL,
+    ward TEXT DEFAULT NULL,
+    reg_no TEXT DEFAULT NULL,
+    doctor_name TEXT DEFAULT NULL,
+    contact_no TEXT DEFAULT NULL,
+    diagnosis TEXT DEFAULT NULL,
+    specific_requirement TEXT DEFAULT NULL,
+    tracker_lat REAL,
+    tracker_lng REAL,
+    tracker_updated DATETIME,
     FOREIGN KEY (hospital_id) REFERENCES hospital(id),
     FOREIGN KEY (blood_bank_id) REFERENCES blood_bank(id)
   );
@@ -58,6 +70,23 @@ if (!bankColumns.some(col => col.name === 'phone')) {
 const requestColumns = db.prepare("PRAGMA table_info(request)").all();
 if (!requestColumns.some(col => col.name === 'pickup_otp')) {
   db.exec('ALTER TABLE request ADD COLUMN pickup_otp TEXT DEFAULT NULL');
+}
+
+// Migration for patient details fields
+const patientFields = ['component', 'patient_name', 'patient_age_sex', 'ward', 'reg_no', 'doctor_name', 'contact_no', 'diagnosis', 'specific_requirement'];
+for (const field of patientFields) {
+  if (!requestColumns.some(col => col.name === field)) {
+    db.exec(`ALTER TABLE request ADD COLUMN ${field} TEXT DEFAULT NULL`);
+  }
+}
+
+// Migration for tracker columns
+const trackerFields = ['tracker_lat', 'tracker_lng', 'tracker_updated'];
+for (const field of trackerFields) {
+  if (!requestColumns.some(col => col.name === field)) {
+    const type = field === 'tracker_updated' ? 'DATETIME' : 'REAL';
+    db.exec(`ALTER TABLE request ADD COLUMN ${field} ${type} DEFAULT NULL`);
+  }
 }
 
 // Seed data only if no blood banks exist

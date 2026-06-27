@@ -190,26 +190,36 @@ async function loadRequests() {
       return;
     }
     container.innerHTML = data.map(req => `
-      <div class="bb-card mb-3 p-3">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <h5 class="mb-1">Request #${req.id} (${req.blood_group})</h5>
-            <p class="mb-1 text-muted">Hospital: ${req.hospital_name} | Units: ${req.units} | Urgency: ${req.urgency}</p>
-            <small>${new Date(req.created_at).toLocaleString()}</small>
+    <div class="bb-card mb-3 p-3">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h5 class="mb-1">Request #${req.id} (${req.blood_group})</h5>
+          <p class="mb-1 text-muted">Hospital: ${req.hospital_name} | Units: ${req.units} | Urgency: ${req.urgency}</p>
+          ${req.patient_name ? `
+          <div class="mt-2 p-2 bg-light rounded">
+            <strong>Patient:</strong> ${req.patient_name} (${req.patient_age_sex || 'N/A'})<br>
+            <strong>Ward / Reg:</strong> ${req.ward || 'N/A'} / ${req.reg_no || 'N/A'}<br>
+            <strong>Doctor:</strong> ${req.doctor_name || 'N/A'} | <strong>Contact:</strong> ${req.contact_no || 'N/A'}<br>
+            <strong>Diagnosis:</strong> ${req.diagnosis || 'N/A'}<br>
+            <strong>Component:</strong> ${req.component || 'PRBC'} ${req.specific_requirement ? '(' + req.specific_requirement + ')' : ''}
           </div>
-          <span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Cancelled' ? 'secondary' : 'success'}">${req.status}</span>
+          ` : ''}
+        ${req.delivery_name ? `<p class="mb-1 mt-1"><strong>Rider:</strong> ${req.delivery_name} (${req.delivery_phone || 'N/A'})</p>` : ''}
+        <small>${new Date(req.created_at).toLocaleString()}</small>
         </div>
-        ${req.status === 'Pending' ? `
-          <button class="btn btn-sm btn-success mt-2" onclick="acknowledgeRequest(${req.id})">Acknowledge</button>
-        ` : ''}
-        ${req.status === 'Acknowledged' ? `
-          <div class="mt-2">
-            <input type="text" id="otpInput${req.id}" placeholder="Enter OTP" class="form-control form-control-sm d-inline-block w-auto" style="max-width:150px;">
-            <button class="btn btn-sm btn-bb-red ms-1" onclick="verifyPickup(${req.id})">Verify Pickup</button>
-            <span id="verifyMsg${req.id}" class="ms-2"></span>
-          </div>` : ''}
+        <span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Cancelled' ? 'secondary' : 'success'}">${req.status}</span>
       </div>
-    `).join('');
+      ${req.status === 'Pending' ? `
+        <button class="btn btn-sm btn-success mt-2" onclick="acknowledgeRequest(${req.id})">Acknowledge</button>
+      ` : ''}
+      ${(req.status === 'Acknowledged' || req.status === 'InTransit') ? `
+      <div class="mt-2">
+        <input type="text" id="otpInput${req.id}" placeholder="Enter OTP" class="form-control form-control-sm d-inline-block w-auto" style="max-width:150px;">
+        <button class="btn btn-sm btn-bb-red ms-1" onclick="verifyPickup(${req.id})">Verify Pickup</button>
+        <span id="verifyMsg${req.id}" class="ms-2"></span>
+      </div>` : ''}
+    </div>
+  `).join('');
   } catch (err) {
     console.error(err);
     document.getElementById('requestsList').innerHTML = '<div class="alert alert-danger">Failed to load requests.</div>';

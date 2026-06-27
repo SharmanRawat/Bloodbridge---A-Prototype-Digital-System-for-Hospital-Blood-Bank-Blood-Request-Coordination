@@ -4,13 +4,26 @@
   <meta charset="UTF-8">
   <title>Requisition Slip - BloodBridge</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link href="style.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <!-- Stable QR code library from cdnjs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
+    :root{
+      --bb-red:#C62828;
+      --bb-bg:#f8f9fa;
+      --bb-text:#212529;
+      --bb-muted:#6c757d;
+      --bb-border:#dee2e6;
+      --bb-radius:12px;
+    }
+    body{background:var(--bb-bg);color:var(--bb-text);font-family:system-ui,-apple-system,sans-serif;}
+    .bb-brand{font-weight:800;font-size:1.25rem;text-decoration:none;color:var(--bb-text);}
+    .bb-brand .dot{color:var(--bb-red);}
+    .navbar{background-color:#fff !important;box-shadow:0 2px 8px rgba(0,0,0,0.04);z-index:1030;}
+    .navbar .nav-link{font-weight:600;color:var(--bb-text);}
+    .navbar .nav-link:hover{color:var(--bb-red);}
+    .nav-link.active{color:var(--bb-red)!important;}
+    .bb-page{padding-top:80px;}
     @media print {
       body { font-size: 14px; }
       .no-print { display: none; }
@@ -18,60 +31,71 @@
   </style>
 </head>
 <body class="p-4">
-  <nav class="navbar navbar-expand-lg bb-navbar sticky-top">
+
+<!-- Navbar with mobile‑friendly toggle -->
+<nav class="navbar navbar-expand-lg sticky-top">
   <div class="container">
     <a class="bb-brand" href="index.html"><span class="dot">🩸</span> BloodBridge</a>
-    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <i class="fa-solid fa-bars"></i>
     </button>
-    <div class="collapse navbar-collapse justify-content-end" id="nav">
-      <ul class="navbar-nav align-items-lg-center">
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="hospital.html">Hospital</a></li>
         <li class="nav-item"><a class="nav-link" href="bloodbank.html">Blood Bank</a></li>
         <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
       </ul>
     </div>
-    </div>
-  </nav>
+  </div>
+</nav>
+
+<main class="bb-page">
   <div class="container border p-4" style="max-width:600px">
     <h3 class="text-center mb-3">Blood Requisition Slip</h3>
     <div id="slipContent">Loading...</div>
     <button class="btn btn-primary no-print mt-3" onclick="window.print()">Print</button>
   </div>
+</main>
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+<!-- Bootstrap JS (required for navbar toggle) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
 
-    async function loadSlip() {
-      const res = await fetch(`/api/hospital/request/${id}`);
-      const req = await res.json();
-      document.getElementById('slipContent').innerHTML = `
-        <table class="table table-bordered">
-          <tr><td><strong>Request ID</strong></td><td>${req.id}</td></tr>
-          <tr><td><strong>Hospital</strong></td><td>${req.hospital_name}</td></tr>
-          <tr><td><strong>Blood Bank</strong></td><td>${req.bank_name}</td></tr>
-          <tr><td><strong>Blood Group</strong></td><td>${req.blood_group}</td></tr>
-          <tr><td><strong>Units</strong></td><td>${req.units}</td></tr>
-          <tr><td><strong>Urgency</strong></td><td>${req.urgency}</td></tr>
-          <tr><td><strong>Date</strong></td><td>${new Date(req.created_at).toLocaleString()}</td></tr>
-          <tr><td><strong>Status</strong></td><td>${req.status}</td></tr>
-        </table>
-        <div id="qrcode" class="text-center mb-3"></div>
-        <p class="text-muted">This is a digital pre-intimation. Physical verification required at blood bank.</p>
-      `;
-
-      // Generate QR code into the container
-      const qrContainer = document.getElementById('qrcode');
-      new QRCode(qrContainer, {
-        text: `BLOODBRIDGE:${req.id}`,
-        width: 128,
-        height: 128
-      });
-    }
-
-    if (id) loadSlip();
-  </script>
+  async function loadSlip() {
+    const res = await fetch(`/api/hospital/request/${id}`);
+    const req = await res.json();
+    document.getElementById('slipContent').innerHTML = `
+      <table class="table table-bordered">
+        <tr><td><strong>Request ID</strong></td><td>${req.id}</td></tr>
+        <tr><td><strong>Hospital</strong></td><td>${req.hospital_name}</td></tr>
+        <tr><td><strong>Blood Bank</strong></td><td>${req.bank_name}</td></tr>
+        <tr><td><strong>Patient</strong></td><td>${req.patient_name || 'N/A'} (${req.patient_age_sex || ''})</td></tr>
+        <tr><td><strong>Ward / Reg No</strong></td><td>${req.ward || 'N/A'} / ${req.reg_no || 'N/A'}</td></tr>
+        <tr><td><strong>Doctor</strong></td><td>${req.doctor_name || 'N/A'}</td></tr>
+        <tr><td><strong>Diagnosis</strong></td><td>${req.diagnosis || 'N/A'}</td></tr>
+        <tr><td><strong>Blood Group</strong></td><td>${req.blood_group}</td></tr>
+        <tr><td><strong>Component</strong></td><td>${req.component || 'PRBC'} ${req.specific_requirement ? '(' + req.specific_requirement + ')' : ''}</td></tr>
+        <tr><td><strong>Units</strong></td><td>${req.units}</td></tr>
+        <tr><td><strong>Urgency</strong></td><td>${req.urgency}</td></tr>
+        <tr><td><strong>Date</strong></td><td>${new Date(req.created_at).toLocaleString()}</td></tr>
+        <tr><td><strong>Status</strong></td><td>${req.status}</td></tr>
+        <tr><td><strong>Delivery Person</strong></td><td>${req.delivery_name || 'N/A'} (${req.delivery_phone || ''})</td></tr>
+      </table>
+      <div id="qrcode" class="text-center mb-3"></div>
+      <p class="text-muted">This is a digital pre-intimation. Physical verification required at blood bank.</p>
+    `;
+    // Generate QR code
+    const qrContainer = document.getElementById('qrcode');
+    new QRCode(qrContainer, {
+      text: `BLOODBRIDGE:${req.id}`,
+      width: 128,
+      height: 128
+    });
+  }
+  if (id) loadSlip();
+</script>
 </body>
 </html>
