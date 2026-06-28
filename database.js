@@ -89,6 +89,22 @@ for (const field of trackerFields) {
   }
 }
 
+// Admin table + seed admin account
+db.exec(`
+  CREATE TABLE IF NOT EXISTS admin (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
+  );
+  INSERT OR IGNORE INTO admin (username, password) VALUES ('admin', 'admin123');
+`);
+
+// Add flagged column to blood_bank if missing
+const bbCols = db.prepare("PRAGMA table_info(blood_bank)").all();
+if (!bbCols.some(col => col.name === 'flagged')) {
+  db.exec('ALTER TABLE blood_bank ADD COLUMN flagged INTEGER DEFAULT 0');
+}
+
 // Seed data only if no blood banks exist
 const bankCount = db.prepare('SELECT COUNT(*) AS count FROM blood_bank').get();
 if (bankCount.count === 0) {

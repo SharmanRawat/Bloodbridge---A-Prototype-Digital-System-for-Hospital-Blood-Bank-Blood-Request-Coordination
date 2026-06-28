@@ -204,6 +204,12 @@ app.get('/api/hospital/track-request/:id', requireRole('hospital'), (req, res) =
   });
 });
 
+
+// ---- Admin routes ----
+const adminRoutes = require('./routes/admin');
+app.post('/api/admin/login', adminRoutes.loginHandler);
+app.use('/api/admin', adminRoutes);
+
 // ---- Blood bank routes ----
 const bloodbankRoutes = require('./routes/bloodbank');
 app.use('/api/bloodbank', bloodbankRoutes);
