@@ -39,6 +39,10 @@
     <p class="text-muted small mt-1">Works best on mobile phones with location enabled.</p>
   </div>
 
+  <!-- Navigation button (hidden until delivery starts) -->
+  <button id="navigateBtn" class="btn btn-bb-outline w-100 mt-2" onclick="navigateToBloodBank()" style="display:none;">
+    🗺️ Navigate to Blood Bank
+  </button>
   <!-- OTP display (filled by JavaScript) -->
   <div id="otpContainer"></div>
 
@@ -91,6 +95,7 @@ function startManualSending() {
   manualInterval = setInterval(() => emitLocation(lat, lng), 5000);
 
   document.getElementById('statusText').textContent = `🔁 Sending location every 5s (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+  document.getElementById('navigateBtn').style.display = 'block';
   pickupButtonShown = false;
   // Fetch OTP and start polling for status changes
   fetchOTP();
@@ -114,6 +119,7 @@ function startGpsTracking() {
     (pos) => {
       emitLocation(pos.coords.latitude, pos.coords.longitude);
       document.getElementById('statusText').textContent = '🛵 Tracking active (GPS). Keep this page open.';
+      document.getElementById('navigateBtn').style.display = 'block';
       pickupButtonShown = false;
       fetchOTP();
       if (statusPollInterval) clearInterval(statusPollInterval);
@@ -210,6 +216,29 @@ if (navigator.geolocation) {
   document.getElementById('gpsStartBtn').disabled = false;
 } else {
   document.getElementById('gpsSection').style.display = 'none';
+}
+
+async function navigateToBloodBank() {
+  try {
+    // Fetch the request details (includes bank coordinates)
+    const res = await fetch(`/api/hospital/request/${requestId}`);
+    const req = await res.json();
+    
+    // Get blood bank coordinates from the request
+    const bankLat = req.lat || req.bank_lat;  // server returns lat/lng in request
+    const bankLng = req.lng || req.bank_lng;
+    
+    if (bankLat && bankLng) {
+      // Open Google Maps directions in a new tab (keeps tracking page alive)
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${bankLat},${bankLng}`;
+      window.open(url, '_blank');
+    } else {
+      alert('Blood bank location not available.');
+    }
+  } catch (err) {
+    console.error('Navigation error:', err);
+    alert('Could not fetch blood bank location.');
+  }
 }
 </script>
 </body>

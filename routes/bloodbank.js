@@ -87,4 +87,49 @@ router.put('/inventory/:bankId', requireRole('bloodbank'), (req, res) => {
   res.json({ success: true, message: 'Inventory updated' });
 });
 
+
+// Return the logged-in bank's coordinates
+router.get('/location/:bankId', requireRole('bloodbank'), (req, res) => {
+  if (parseInt(req.params.bankId) !== req.userId) return res.status(403).json({ error: 'Access denied' });
+  const bank = db.prepare('SELECT lat, lng FROM blood_bank WHERE id = ?').get(req.params.bankId);
+  if (!bank) return res.status(404).json({ error: 'Bank not found' });
+  res.json({ lat: bank.lat, lng: bank.lng });
+});
+
+
+// ---- Blood bank statistics ----
+router.get('/stats/:bankId', requireRole('bloodbank'), (req, res) => {
+  if (parseInt(req.params.bankId) !== req.userId) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  const bankId = parseInt(req.params.bankId);
+
+  // Summary counts
+  const total = db.prepare('SELECT COUNT(*) AS count FROM request WHERE blood_bank_id = ?').get(bankId).count;
+  const fulfilled = db.prepare("SELECT COUNT(*) AS count FROM request WHERE blood_bank_id = ? AND status IN ('Acknowledged','InTransit','OutForDelivery','Delivered','Ready')").get(bankId).count;
+  const pending = db.prepare("SELECT COUNT(*) AS count FROM request WHERE blood_bank_id = ? AND status = 'Pending'").get(bankId).count;
+
+  // Most requested blood groups (top 5)
+  const topGroups = db.prepare(`
+    SELECT blood_group, COUNT(*) AS cnt
+    FROM request
+    WHERE blood_bank_id = ?
+    GROUP BY blood_group
+    ORDER BY cnt DESC
+    LIMIT 5
+  `).all(bankId);
+
+  // Requests per day for the last 7 days (using SQLite date arithmetic)
+  const daily = db.prepare(`
+    SELECT date(created_at) as day, COUNT(*) AS cnt
+    FROM request
+    WHERE blood_bank_id = ?
+      AND created_at >= datetime('now', '-7 days')
+    GROUP BY day
+    ORDER BY day DESC
+  `).all(bankId);
+
+  res.json({ total, fulfilled, pending, topGroups, daily });
+});
+
 module.exports = router;

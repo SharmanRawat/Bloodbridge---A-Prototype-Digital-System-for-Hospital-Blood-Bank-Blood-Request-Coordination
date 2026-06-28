@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BloodBridge – Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bb-red: #C62828;
+      --bb-red-dark: #9b1c1c;
+      --bb-bg: #f8f9fa;
+      --bb-text: #212529;
+      --bb-muted: #6c757d;
+      --bb-border: #dee2e6;
+      --bb-radius: 12px;
+    }
+    body { background: var(--bb-bg); color: var(--bb-text); font-family: system-ui, -apple-system, sans-serif; }
+    .bb-brand { font-weight: 800; font-size: 1.25rem; text-decoration: none; color: var(--bb-text); }
+    .bb-brand .dot { color: var(--bb-red); }
+    .navbar {
+      background-color: #fff !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      z-index: 1030;
+    }
+    .navbar .nav-link { font-weight: 600; color: var(--bb-text); }
+    .navbar .nav-link:hover { color: var(--bb-red); }
+    .bb-card {
+      background: #fff;
+      border: 1px solid var(--bb-border);
+      border-radius: var(--bb-radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .btn-bb-red {
+      background-color: var(--bb-red);
+      border-color: var(--bb-red);
+      color: white;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 0.4rem 0.9rem;
+      border: none;
+      font-size: 0.85rem;
+    }
+    .btn-bb-red:hover { background-color: var(--bb-red-dark); color: white; }
+    .btn-bb-ghost {
+      background: transparent;
+      border: 1.5px solid var(--bb-red);
+      color: var(--bb-red);
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.85rem;
+    }
+    .btn-bb-ghost:hover { background: var(--bb-red); color: white; }
+    .bb-page { padding-top: 80px; padding-bottom: 3rem; }
+    .bb-h1 { font-size: 1.75rem; font-weight: 800; }
+    .bb-sub { color: var(--bb-muted); }
+    .admin-badge {
+      display: inline-block;
+      background: #fff3e0;
+      color: #e65100;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+
+    /* Stat cards */
+    .stat-card {
+      border-radius: var(--bb-radius);
+      padding: 1.25rem 1.5rem;
+      border: 1px solid var(--bb-border);
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .stat-card .stat-num {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .stat-card .stat-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--bb-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+    .stat-card .stat-icon {
+      font-size: 1.5rem;
+      opacity: 0.15;
+      position: absolute;
+      right: 1.25rem;
+      top: 1.25rem;
+    }
+    .stat-card { position: relative; overflow: hidden; }
+
+    /* Tab styling */
+    .nav-tabs .nav-link {
+      font-weight: 600;
+      color: var(--bb-muted);
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0.75rem 1.25rem;
+    }
+    .nav-tabs .nav-link.active {
+      color: var(--bb-red);
+      border-bottom: 2px solid var(--bb-red);
+      background: transparent;
+    }
+    .nav-tabs { border-bottom: 2px solid var(--bb-border); }
+
+    /* Table */
+    .table th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--bb-muted); font-weight: 700; border-bottom: 2px solid var(--bb-border); }
+    .table td { vertical-align: middle; font-size: 0.9rem; }
+    .table-hover tbody tr:hover { background-color: #fafafa; }
+
+    /* Status badges */
+    .badge-pending { background: #fff3cd; color: #856404; font-weight: 600; padding: 0.35em 0.65em; border-radius: 6px; font-size: 0.78rem; }
+    .badge-acknowledged { background: #d1e7dd; color: #0f5132; font-weight: 600; padding: 0.35em 0.65em; border-radius: 6px; font-size: 0.78rem; }
+    .badge-cancelled { background: #f8d7da; color: #842029; font-weight: 600; padding: 0.35em 0.65em; border-radius: 6px; font-size: 0.78rem; }
+    .badge-ready { background: #cfe2ff; color: #084298; font-weight: 600; padding: 0.35em 0.65em; border-radius: 6px; font-size: 0.78rem; }
+    .badge-flagged { background: #fff3e0; color: #e65100; font-weight: 600; padding: 0.35em 0.65em; border-radius: 6px; font-size: 0.78rem; }
+
+    /* Filter bar */
+    .filter-bar { background: #fff; border: 1px solid var(--bb-border); border-radius: var(--bb-radius); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .form-select, .form-control { border-radius: 8px; }
+
+    /* Toast */
+    .bb-toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      min-width: 260px;
+      border-radius: var(--bb-radius);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg sticky-top">
+  <div class="container">
+    <a class="bb-brand" href="index.html">
+      <span class="dot">🩸</span> BloodBridge
+      <span class="admin-badge">ADMIN</span>
+    </a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="nav">
+      <ul class="navbar-nav gap-2 align-items-lg-center">
+        <li class="nav-item">
+          <a class="nav-link" href="index.html"><i class="fa-solid fa-house me-1"></i>Home</a>
+        </li>
+        <li class="nav-item">
+          <span class="nav-link text-muted small" id="adminNameDisplay"></span>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="logoutBtn"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Main content -->
+<main class="bb-page">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="mb-4">
+      <h1 class="bb-h1">Admin Panel</h1>
+      <p class="bb-sub">System overview and management</p>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="row g-3 mb-4" id="statsRow">
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <i class="fa-solid fa-hospital stat-icon"></i>
+          <div class="stat-num text-primary" id="statHospitals">--</div>
+          <div class="stat-label">Hospitals</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <i class="fa-solid fa-droplet stat-icon"></i>
+          <div class="stat-num" style="color:var(--bb-red)" id="statBanks">--</div>
+          <div class="stat-label">Blood Banks</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <i class="fa-solid fa-file-medical stat-icon"></i>
+          <div class="stat-num text-dark" id="statTotal">--</div>
+          <div class="stat-label">Total Requests</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <i class="fa-solid fa-clock stat-icon"></i>
+          <div class="stat-num text-warning" id="statPending">--</div>
+          <div class="stat-label">Pending</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub stats row -->
+    <div class="row g-3 mb-4">
+      <div class="col-4">
+        <div class="stat-card text-center py-3">
+          <div class="stat-num text-success" id="statAck">--</div>
+          <div class="stat-label">Acknowledged</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="stat-card text-center py-3">
+          <div class="stat-num text-info" id="statReady">--</div>
+          <div class="stat-label">Ready</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="stat-card text-center py-3">
+          <div class="stat-num text-danger" id="statCancelled">--</div>
+          <div class="stat-label">Cancelled</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-0" id="adminTabs" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabHospitals" type="button">
+          <i class="fa-solid fa-hospital me-1"></i>Hospitals
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabBanks" type="button">
+          <i class="fa-solid fa-droplet me-1"></i>Blood Banks
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRequests" type="button">
+          <i class="fa-solid fa-file-medical me-1"></i>Request Audit Log
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content bb-card p-3 p-md-4" style="border-top:none;border-radius:0 0 var(--bb-radius) var(--bb-radius);">
+
+      <!-- Hospitals Tab -->
+      <div class="tab-pane fade show active" id="tabHospitals">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">All Hospitals</h5>
+          <button class="btn btn-bb-ghost btn-sm" onclick="loadHospitals()">
+            <i class="fa-solid fa-rotate-right me-1"></i>Refresh
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Phone</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="hospitalsBody">
+              <tr><td colspan="5" class="text-center text-muted py-4">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Blood Banks Tab -->
+      <div class="tab-pane fade" id="tabBanks">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">All Blood Banks</h5>
+          <button class="btn btn-bb-ghost btn-sm" onclick="loadBanks()">
+            <i class="fa-solid fa-rotate-right me-1"></i>Refresh
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="banksBody">
+              <tr><td colspan="6" class="text-center text-muted py-4">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Requests Tab -->
+      <div class="tab-pane fade" id="tabRequests">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">Request Audit Log</h5>
+          <button class="btn btn-bb-ghost btn-sm" onclick="loadRequests()">
+            <i class="fa-solid fa-rotate-right me-1"></i>Refresh
+          </button>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar d-flex gap-2 flex-wrap">
+          <select id="statusFilter" class="form-select form-select-sm" style="max-width:160px;" onchange="loadRequests()">
+            <option value="">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Acknowledged">Acknowledged</option>
+            <option value="Ready">Ready</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          <span class="text-muted small align-self-center" id="requestCount"></span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Hospital</th>
+                <th>Blood Bank</th>
+                <th>Blood Group</th>
+                <th>Units</th>
+                <th>Urgency</th>
+                <th>Status</th>
+                <th>Date/Time</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="requestsBody">
+              <tr><td colspan="9" class="text-center text-muted py-4">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<!-- Toast -->
+<div id="bbToast" class="bb-toast toast align-items-center text-white border-0 d-none" role="alert">
+  <div class="d-flex">
+    <div class="toast-body fw-semibold" id="toastMsg"></div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="hideToast()"></button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // ---- Auth guard ----
+  (function() {
+    const role = localStorage.getItem('role');
+    if (role !== 'admin') {
+      window.location.href = 'admin-login.html';
+    }
+    const name = localStorage.getItem('userName') || 'Admin';
+    const el = document.getElementById('adminNameDisplay');
+    if (el) el.textContent = name;
+  })();
+
+  // ---- Logout ----
+  document.getElementById('logoutBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    localStorage.clear();
+    window.location.href = 'admin-login.html';
+  });
+
+  // ---- Auth headers ----
+  function authHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'x-user-id': localStorage.getItem('userId') || '',
+      'x-user-role': localStorage.getItem('role') || ''
+    };
+  }
+
+  // ---- Toast ----
+  function showToast(msg, success = true) {
+    const toast = document.getElementById('bbToast');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.classList.remove('d-none', 'bg-success', 'bg-danger');
+    toast.classList.add(success ? 'bg-success' : 'bg-danger');
+    setTimeout(() => toast.classList.add('d-none'), 3000);
+  }
+  function hideToast() {
+    document.getElementById('bbToast').classList.add('d-none');
+  }
+
+  // ---- Status badge ----
+  function statusBadge(status) {
+    const map = {
+      'Pending': 'badge-pending',
+      'Acknowledged': 'badge-acknowledged',
+      'Cancelled': 'badge-cancelled',
+      'Ready': 'badge-ready'
+    };
+    return `<span class="${map[status] || 'badge-pending'}">${status}</span>`;
+  }
+
+  // ---- Load stats ----
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/admin/stats', { headers: authHeaders() });
+      const d = await res.json();
+      document.getElementById('statHospitals').textContent = d.totalHospitals;
+      document.getElementById('statBanks').textContent = d.totalBanks;
+      document.getElementById('statTotal').textContent = d.totalRequests;
+      document.getElementById('statPending').textContent = d.pending;
+      document.getElementById('statAck').textContent = d.acknowledged;
+      document.getElementById('statReady').textContent = d.ready;
+      document.getElementById('statCancelled').textContent = d.cancelled;
+    } catch (err) {
+      console.error('Stats error:', err);
+    }
+  }
+
+  // ---- Load hospitals ----
+  async function loadHospitals() {
+    const tbody = document.getElementById('hospitalsBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading...</td></tr>';
+    try {
+      const res = await fetch('/api/admin/hospitals', { headers: authHeaders() });
+      const data = await res.json();
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No hospitals found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(h => `
+        <tr>
+          <td><span class="text-muted">#${h.id}</span></td>
+          <td><strong>${h.name}</strong></td>
+          <td>${h.address || '<span class="text-muted">—</span>'}</td>
+          <td>${h.phone || '<span class="text-muted">—</span>'}</td>
+          <td>
+            <button class="btn btn-bb-ghost btn-sm me-1" onclick="resetHospitalPwd(${h.id}, '${h.name}')">
+              <i class="fa-solid fa-key me-1"></i>Reset Pwd
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteHospital(${h.id}, '${h.name}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Failed to load hospitals.</td></tr>';
+    }
+  }
+
+  // ---- Load blood banks ----
+  async function loadBanks() {
+    const tbody = document.getElementById('banksBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading...</td></tr>';
+    try {
+      const res = await fetch('/api/admin/bloodbanks', { headers: authHeaders() });
+      const data = await res.json();
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No blood banks found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(b => `
+        <tr>
+          <td><span class="text-muted">#${b.id}</span></td>
+          <td><strong>${b.name}</strong></td>
+          <td>${b.address || '<span class="text-muted">—</span>'}</td>
+          <td>${b.phone || '<span class="text-muted">—</span>'}</td>
+          <td>
+            ${b.flagged
+              ? '<span class="badge-flagged"><i class="fa-solid fa-flag me-1"></i>Flagged</span>'
+              : '<span class="badge-acknowledged">Active</span>'
+            }
+          </td>
+          <td>
+            <button class="btn btn-bb-ghost btn-sm me-1" onclick="resetBankPwd(${b.id}, '${b.name}')">
+              <i class="fa-solid fa-key me-1"></i>Reset Pwd
+            </button>
+            <button class="btn btn-sm btn-outline-warning me-1" onclick="toggleFlag(${b.id}, '${b.name}', ${b.flagged})">
+              <i class="fa-solid fa-flag me-1"></i>${b.flagged ? 'Unflag' : 'Flag'}
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteBank(${b.id}, '${b.name}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Failed to load blood banks.</td></tr>';
+    }
+  }
+
+  // ---- Load requests ----
+  async function loadRequests() {
+    const tbody = document.getElementById('requestsBody');
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Loading...</td></tr>';
+    const status = document.getElementById('statusFilter').value;
+    const url = '/api/admin/requests' + (status ? `?status=${status}` : '');
+    try {
+      const res = await fetch(url, { headers: authHeaders() });
+      const data = await res.json();
+      document.getElementById('requestCount').textContent = `${data.length} record${data.length !== 1 ? 's' : ''}`;
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No requests found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td><span class="text-muted">#${r.id}</span></td>
+          <td>${r.hospital_name || '<span class="text-muted">—</span>'}</td>
+          <td>${r.bank_name || '<span class="text-muted">—</span>'}</td>
+          <td><strong>${r.blood_group}</strong></td>
+          <td>${r.units}</td>
+          <td>${r.urgency}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td><small>${new Date(r.created_at).toLocaleString()}</small></td>
+          <td>
+            ${r.status === 'Pending'
+              ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelRequest(${r.id})">
+                   <i class="fa-solid fa-xmark me-1"></i>Cancel
+                 </button>`
+              : '<span class="text-muted small">—</span>'
+            }
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-4">Failed to load requests.</td></tr>';
+    }
+  }
+
+  // ---- Actions ----
+  async function resetHospitalPwd(id, name) {
+    if (!confirm(`Reset password for "${name}" to hospital123?`)) return;
+    try {
+      const res = await fetch(`/api/admin/hospitals/${id}/reset-password`, { method: 'PUT', headers: authHeaders() });
+      const d = await res.json();
+      showToast(d.success ? `Password reset for ${name}` : d.error, d.success);
+    } catch { showToast('Failed to reset password', false); }
+  }
+
+  async function deleteHospital(id, name) {
+    if (!confirm(`Delete hospital "${name}"? This will also delete all their requests.`)) return;
+    try {
+      const res = await fetch(`/api/admin/hospitals/${id}`, { method: 'DELETE', headers: authHeaders() });
+      const d = await res.json();
+      if (d.success) { showToast(`${name} deleted`); loadHospitals(); loadStats(); }
+      else showToast(d.error, false);
+    } catch { showToast('Failed to delete', false); }
+  }
+
+  async function resetBankPwd(id, name) {
+    if (!confirm(`Reset password for "${name}" to bank123?`)) return;
+    try {
+      const res = await fetch(`/api/admin/bloodbanks/${id}/reset-password`, { method: 'PUT', headers: authHeaders() });
+      const d = await res.json();
+      showToast(d.success ? `Password reset for ${name}` : d.error, d.success);
+    } catch { showToast('Failed to reset password', false); }
+  }
+
+  async function toggleFlag(id, name, currentlyFlagged) {
+    const action = currentlyFlagged ? 'unflag' : 'flag';
+    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/admin/bloodbanks/${id}/toggle-flag`, { method: 'PUT', headers: authHeaders() });
+      const d = await res.json();
+      if (d.success) { showToast(`${name} ${d.flagged ? 'flagged' : 'unflagged'}`); loadBanks(); }
+      else showToast(d.error, false);
+    } catch { showToast('Failed to toggle flag', false); }
+  }
+
+  async function deleteBank(id, name) {
+    if (!confirm(`Delete blood bank "${name}"? This will also delete all their inventory and requests.`)) return;
+    try {
+      const res = await fetch(`/api/admin/bloodbanks/${id}`, { method: 'DELETE', headers: authHeaders() });
+      const d = await res.json();
+      if (d.success) { showToast(`${name} deleted`); loadBanks(); loadStats(); }
+      else showToast(d.error, false);
+    } catch { showToast('Failed to delete', false); }
+  }
+
+  async function cancelRequest(id) {
+    if (!confirm(`Cancel request #${id}?`)) return;
+    try {
+      const res = await fetch(`/api/admin/requests/${id}/cancel`, { method: 'PUT', headers: authHeaders() });
+      const d = await res.json();
+      if (d.success) { showToast(`Request #${id} cancelled`); loadRequests(); loadStats(); }
+      else showToast(d.error, false);
+    } catch { showToast('Failed to cancel request', false); }
+  }
+
+  // ---- Initial load ----
+loadStats();
+loadHospitals();
+loadBanks();
+loadRequests();
+</script>
+</body>
+</html>

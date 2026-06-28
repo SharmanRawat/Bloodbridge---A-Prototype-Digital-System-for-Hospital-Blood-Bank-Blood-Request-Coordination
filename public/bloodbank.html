@@ -34,6 +34,7 @@
     .bb-page{padding-top:80px;}
     .inventory-form{background:#f9f9f9;padding:1rem;border-radius:var(--bb-radius);}
     .current-stock{font-weight:600;color:var(--bb-red);}
+    .badge-low { background: #fff3cd; color: #856404; font-weight: 600; padding: 0.25em 0.5em; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -60,14 +61,27 @@
 
     <ul class="nav nav-tabs" id="bankTabs" role="tablist">
       <li class="nav-item" role="presentation">
+        <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button">
+          <i class="fa-solid fa-chart-simple me-1"></i> Analytics
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
         <button class="nav-link active" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button">Incoming Requests</button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button">Manage Inventory</button>
       </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="donors-tab" data-bs-toggle="tab" data-bs-target="#donors" type="button">Find Donors</button>
+      </li>
     </ul>
 
     <div class="tab-content mt-3">
+      <!-- Analytics Tab (NEW) -->
+      <div class="tab-pane fade" id="analytics">
+        <div id="analyticsContent">Loading stats…</div>
+      </div>
+
       <!-- Incoming Requests Tab -->
       <div class="tab-pane fade show active" id="requests">
         <div id="requestsList"></div>
@@ -109,10 +123,27 @@
         <h5>Current Inventory</h5>
         <div id="inventoryTable"></div>
       </div>
-    </div>
-  </div>
-</main>
 
+      <!-- Find Donors Tab (NEW) -->
+      <div class="tab-pane fade" id="donors">
+        <div class="row g-3">
+          <div class="col-auto">
+            <label class="form-label">Blood Group</label>
+            <select id="donorBloodGroup" class="form-select">
+              <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+              <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+            </select>
+          </div>
+          <div class="col-auto align-self-end">
+            <button class="btn btn-bb-red" onclick="searchDonors()">
+              <i class="fa-solid fa-magnifying-glass me-1"></i> Search
+            </button>
+          </div>
+        </div>
+        <div id="donorResults" class="mt-3"></div>
+      </div>
+    </div><!-- /tab-content -->
+</main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Auth check (requires bloodbank role) -->
@@ -175,6 +206,90 @@ document.getElementById('bankNameDisplay').textContent = bankName;
 
 // ----- 3. Inventory data (global to look up current stock) -----
 let inventoryData = [];
+
+// ---------- Analytics ----------
+async function loadAnalytics() {
+  const container = document.getElementById('analyticsContent');
+  container.innerHTML = '<div class="text-muted">Loading stats…</div>';
+  try {
+    const res = await fetch(`/api/bloodbank/stats/${bankId}`, { headers: authHeaders() });
+    const stats = await res.json();
+    if (!stats) {
+      container.innerHTML = '<div class="alert alert-danger">Failed to load stats.</div>';
+      return;
+    }
+
+    // Build summary cards
+    const summaryHtml = `
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="stat-card">
+            <i class="fa-solid fa-inbox stat-icon"></i>
+            <div class="stat-num text-primary">${stats.total}</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card">
+            <i class="fa-solid fa-check-circle stat-icon text-success"></i>
+            <div class="stat-num text-success">${stats.fulfilled}</div>
+            <div class="stat-label">Fulfilled</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card">
+            <i class="fa-solid fa-clock stat-icon text-warning"></i>
+            <div class="stat-num text-warning">${stats.pending}</div>
+            <div class="stat-label">Pending</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Most requested blood groups
+    let groupsHtml = '<h5 class="fw-bold mb-2">Most Requested Blood Groups</h5>';
+    if (stats.topGroups && stats.topGroups.length > 0) {
+      groupsHtml += `
+        <div class="list-group mb-4">
+          ${stats.topGroups.map(g => `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <span><strong>${g.blood_group}</strong></span>
+              <span class="badge bg-primary rounded-pill">${g.cnt}</span>
+            </div>
+          `).join('')}
+        </div>`;
+    } else {
+      groupsHtml += '<p class="text-muted">No requests yet.</p>';
+    }
+
+    // Daily requests table
+    let dailyHtml = '<h5 class="fw-bold mb-2">Requests Per Day (Last 7 Days)</h5>';
+    if (stats.daily && stats.daily.length > 0) {
+      dailyHtml += `
+        <table class="table table-bordered table-sm">
+          <thead><tr><th>Date</th><th>Requests</th></tr></thead>
+          <tbody>
+            ${stats.daily.map(d => `
+              <tr><td>${d.day}</td><td>${d.cnt}</td></tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    } else {
+      dailyHtml += '<p class="text-muted">No requests in the last 7 days.</p>';
+    }
+
+    container.innerHTML = summaryHtml + groupsHtml + dailyHtml;
+
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<div class="alert alert-danger">Failed to load stats.</div>';
+  }
+}
+
+// Auto‑load analytics when the tab is shown (optional, but we can just load it on click)
+document.getElementById('analytics-tab').addEventListener('shown.bs.tab', () => {
+  loadAnalytics();
+});
 
 // ----- 4. Load incoming requests -----
 async function loadRequests() {
@@ -267,30 +382,37 @@ async function acknowledgeRequest(requestId) {
 // ----- 6. Load inventory -----
 async function loadInventory() {
   try {
-    const res = await fetch(`/api/bloodbank/inventory/${bankId}`, {
-      headers: authHeaders()
-    });
-    inventoryData = await res.json();
+    const res = await fetch(`/api/bloodbank/inventory/${bankId}`, { headers: authHeaders() });
+    const data = await res.json();
     const container = document.getElementById('inventoryTable');
-    if (!Array.isArray(inventoryData) || inventoryData.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
       container.innerHTML = '<div class="alert alert-info">No inventory data.</div>';
-    } else {
-      container.innerHTML = `
-        <table class="table table-bordered">
-          <thead><tr><th>Blood Group</th><th>Units</th><th>Last Updated</th></tr></thead>
-          <tbody>
-            ${inventoryData.map(item => `
+      return;
+    }
+    container.innerHTML = `
+      <table class="table table-bordered">
+        <thead><tr><th>Blood Group</th><th>Units</th><th>Last Updated</th><th></th></tr></thead>
+        <tbody>
+          ${data.map(item => {
+            const lowStock = item.units <= 3;
+            return `
               <tr>
                 <td>${item.blood_group}</td>
-                <td>${item.units}</td>
+                <td>
+                  ${item.units}
+                  ${lowStock ? '<span class="badge bg-warning text-dark ms-2">Low Stock</span>' : ''}
+                </td>
                 <td>${new Date(item.last_updated).toLocaleString()}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>`;
-    }
-    // Update current stock display if a blood group is selected
-    updateCurrentStockDisplay();
+                <td>
+                  ${lowStock ? `
+                    <button class="btn btn-sm btn-bb-red" onclick="findDonorsForGroup('${item.blood_group}')">
+                      <i class="fa-solid fa-magnifying-glass me-1"></i> Find Donors
+                    </button>` : ''}
+                </td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
   } catch (err) {
     console.error(err);
     document.getElementById('inventoryTable').innerHTML = '<div class="alert alert-danger">Failed to load inventory.</div>';
@@ -353,6 +475,70 @@ document.getElementById('updateStockBtn').addEventListener('click', async () => 
 setInterval(loadRequests, 10000);
 loadRequests();
 loadInventory();
+
+
+// ========== FIND DONORS ==========
+async function searchDonors() {
+  const bloodGroup = document.getElementById('donorBloodGroup').value;
+  const container = document.getElementById('donorResults');
+  container.innerHTML = '<div class="text-muted">Searching donors…</div>';
+
+  try {
+    // Get bank's own coordinates
+    const locRes = await fetch(`/api/bloodbank/location/${bankId}`, { headers: authHeaders() });
+    const loc = await locRes.json();
+
+    // Fallback to Vadodara centre if location is missing
+    if (!loc.lat || !loc.lng) {
+      loc.lat = 22.3072;
+      loc.lng = 73.1812;
+    }
+
+    const url = `/api/donors/nearby?blood_group=${encodeURIComponent(bloodGroup)}&lat=${loc.lat}&lng=${loc.lng}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    const donors = await res.json();
+
+    if (!Array.isArray(donors) || donors.length === 0) {
+      container.innerHTML = '<div class="alert alert-info">No donors found for this blood group.</div>';
+      return;
+    }
+
+    container.innerHTML = donors.map(d => `
+      <div class="bb-card p-3 mb-2">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>${d.name}</strong> (${d.city || 'N/A'})
+            ${d.distance ? ` – <small>${d.distance.toFixed(1)} km away</small>` : ''}
+          </div>
+          <a href="tel:${d.phone}" class="btn btn-sm btn-bb-red">
+            <i class="fa-solid fa-phone"></i> Call
+          </a>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<div class="alert alert-danger">Failed to load donors.</div>';
+  }
+}
+
+function findDonorsForGroup(bloodGroup) {
+  // Switch to the "Find Donors" tab
+  const donorsTab = document.getElementById('donors-tab');
+  if (donorsTab) {
+    const bsTab = new bootstrap.Tab(donorsTab);
+    bsTab.show();
+  }
+  // Pre‑fill the blood group dropdown and trigger a search
+  const donorBloodGroup = document.getElementById('donorBloodGroup');
+  if (donorBloodGroup) {
+    donorBloodGroup.value = bloodGroup;
+  }
+  // Perform the donor search
+  searchDonors();
+}
+
+
 </script>
 </body>
 </html>

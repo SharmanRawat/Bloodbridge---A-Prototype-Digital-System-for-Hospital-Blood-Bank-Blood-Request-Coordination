@@ -5,6 +5,7 @@ db.exec('PRAGMA foreign_keys = ON');
 
 // Create tables (only SQL here – no JavaScript)
 db.exec(`
+
   CREATE TABLE IF NOT EXISTS hospital (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -58,6 +59,19 @@ db.exec(`
     FOREIGN KEY (hospital_id) REFERENCES hospital(id),
     FOREIGN KEY (blood_bank_id) REFERENCES blood_bank(id)
   );
+
+  CREATE TABLE IF NOT EXISTS donors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    blood_group TEXT CHECK(blood_group IN ('A+','A-','B+','B-','AB+','AB-','O+','O-')),
+    phone TEXT,
+    city TEXT,
+    lat REAL,
+    lng REAL,
+    registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+
 `);
 
 // Migration: add phone column to blood_bank if the table already existed
@@ -88,6 +102,40 @@ for (const field of trackerFields) {
     db.exec(`ALTER TABLE request ADD COLUMN ${field} ${type} DEFAULT NULL`);
   }
 }
+
+// Admin table + seed admin account
+db.exec(`
+  CREATE TABLE IF NOT EXISTS admin (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
+  );
+  INSERT OR IGNORE INTO admin (username, password) VALUES ('admin', 'admin123');
+`);
+
+// Add flagged column to blood_bank if missing
+const bbCols = db.prepare("PRAGMA table_info(blood_bank)").all();
+if (!bbCols.some(col => col.name === 'flagged')) {
+  db.exec('ALTER TABLE blood_bank ADD COLUMN flagged INTEGER DEFAULT 0');
+}
+
+// Migration for donors table: add columns if they don't exist
+const donorColumns = db.prepare("PRAGMA table_info(donors)").all();
+if (donorColumns.length > 0) { // only run if donors table exists (it will after creation)
+  if (!donorColumns.some(col => col.name === 'phone')) {
+    db.exec('ALTER TABLE donors ADD COLUMN phone TEXT');
+  }
+  if (!donorColumns.some(col => col.name === 'city')) {
+    db.exec('ALTER TABLE donors ADD COLUMN city TEXT');
+  }
+  if (!donorColumns.some(col => col.name === 'lat')) {
+    db.exec('ALTER TABLE donors ADD COLUMN lat REAL');
+  }
+  if (!donorColumns.some(col => col.name === 'lng')) {
+    db.exec('ALTER TABLE donors ADD COLUMN lng REAL');
+  }
+}
+
 
 // Seed data only if no blood banks exist
 const bankCount = db.prepare('SELECT COUNT(*) AS count FROM blood_bank').get();

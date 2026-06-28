@@ -145,8 +145,10 @@ app.get('/api/hospital/requests/:hospitalId', requireRole('hospital'), (req, res
 
 app.get('/api/hospital/request/:id', (req, res) => {
   const request = db.prepare(`
-    SELECT r.*, h.name AS hospital_name, b.name AS bank_name
-    FROM request r JOIN hospital h ON r.hospital_id = h.id
+    SELECT r.*, h.name AS hospital_name, b.name AS bank_name,
+           b.lat AS bank_lat, b.lng AS bank_lng
+    FROM request r
+    JOIN hospital h ON r.hospital_id = h.id
     LEFT JOIN blood_bank b ON r.blood_bank_id = b.id
     WHERE r.id = ?
   `).get(req.params.id);
@@ -204,9 +206,26 @@ app.get('/api/hospital/track-request/:id', requireRole('hospital'), (req, res) =
   });
 });
 
+
+// ---- Admin routes ----
+const adminRoutes = require('./routes/admin');
+app.post('/api/admin/login', adminRoutes.loginHandler);
+app.use('/api/admin', adminRoutes);
+
+// ---- Get hospital coordinates ----
+app.get('/api/hospital/location', requireRole('hospital'), (req, res) => {
+  const hospital = db.prepare('SELECT lat, lng FROM hospital WHERE id = ?').get(req.userId);
+  if (!hospital) return res.status(404).json({ error: 'Hospital not found' });
+  res.json({ lat: hospital.lat, lng: hospital.lng });
+});
+
 // ---- Blood bank routes ----
 const bloodbankRoutes = require('./routes/bloodbank');
 app.use('/api/bloodbank', bloodbankRoutes);
+
+// ---- Donor routes ----
+const donorRoutes = require('./routes/donors');
+app.use('/api/donors', donorRoutes);
 
 // ---- Auth routes ----
 const authRoutes = require('./routes/auth');
