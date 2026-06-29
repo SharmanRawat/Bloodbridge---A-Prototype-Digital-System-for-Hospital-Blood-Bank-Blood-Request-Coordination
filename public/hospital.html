@@ -152,94 +152,86 @@ window.requiredRole = 'hospital';
           <a href="hospital_status.html" class="btn btn-bb-ghost flex-shrink-0 ms-3">
             <i class="fa-solid fa-clock-rotate-left me-1"></i> Request History
           </a>
-          <a href="donor-register.html" target="_blank" class="btn btn-bb-ghost">
-            <i class="fa-solid fa-hand-holding-heart me-1"></i> Register Walk‑in Donor
-          </a>
         </div>
 
         <form id="requestForm" class="row g-3">
-          <div class="col-md-4">
-            <label class="bb-label"><i class="fa-solid fa-droplet"></i> Blood Group</label>
-            <select id="bloodGroup" class="form-select" required>
-              <option value="">Select</option>
-              <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-              <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="bb-label"><i class="fa-solid fa-prescription-bottle-medical"></i> Units</label>
-            <input id="units" type="number" min="1" max="20" value="1" class="form-control" required>
-          </div>
-          <div class="col-md-3">
-            <label class="bb-label"><i class="fa-regular fa-clock"></i> Urgency</label>
-            <select id="urgency" class="form-select">
-              <option value="Normal">Normal</option>
-              <option value="Emergency">Emergency</option>
-            </select>
-          </div>
+      <!-- Blood group, units, urgency row -->
+      <div class="col-md-4">
+        <label class="bb-label"><i class="fa-solid fa-droplet"></i> Blood Group</label>
+        <select id="bloodGroup" class="form-select" required>
+          <option value="">Select</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label"><i class="fa-solid fa-prescription-bottle-medical"></i> Units</label>
+        <input id="units" type="number" min="1" max="20" value="1" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label"><i class="fa-regular fa-clock"></i> Urgency</label>
+        <select id="urgency" class="form-select">
+          <option value="Normal">Normal</option>
+          <option value="Emergency">Emergency</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-bb-red w-100">
+          <i class="fa-solid fa-magnifying-glass me-1"></i> Search
+        </button>
+      </div>
 
-          <div class="mb-3">
-          <label class="form-label">Patient Name / Reason (optional)</label>
-          <input type="text" id="patientRef" class="form-control" placeholder="e.g., For emergency patient Ramesh">
-          </div>
-          
-          <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-bb-red w-100">
-              <i class="fa-solid fa-magnifying-glass me-1"></i> Search
-            </button>
-          </div>
-
-          <div class="col-12"><hr></div>
-          <div class="col-md-4">
-            <label class="bb-label">Patient Full Name <span class="text-danger">*</span></label>
-            <input id="patientName" class="form-control" placeholder="Full name" required>
-          </div>
-          <div class="col-md-2">
-            <label class="bb-label">Age / Sex <span class="text-danger">*</span></label>
-            <input id="patientAgeSex" class="form-control" placeholder="45 / Male" required>
-          </div>
-          <div class="col-md-3">
-            <label class="bb-label">Ward / Bed No <span class="text-danger">*</span></label>
-            <input id="ward" class="form-control" placeholder="ICU-2" required>
-          </div>
-          <div class="col-md-3">
-            <label class="bb-label">Indoor / Reg No</label>
-            <input id="regNo" class="form-control" placeholder="IPD-2026-0451">
-          </div>
-          <div class="col-md-4">
-            <label class="bb-label">Doctor Name <span class="text-danger">*</span></label>
-            <input id="doctorName" class="form-control" placeholder="Dr. Mehta" required>
-          </div>
-          <div class="col-md-3">
-            <label class="bb-label">Contact No</label>
-            <input id="contactNo" class="form-control" placeholder="9876543210">
-          </div>
-          <div class="col-md-5">
-            <label class="bb-label">Diagnosis <span class="text-danger">*</span></label>
-            <input id="diagnosis" class="form-control" placeholder="e.g., Severe anemia" required>
-          </div>
-          <div class="col-md-4">
-            <label class="bb-label">Blood Component <span class="text-danger">*</span></label>
-            <select id="component" class="form-select" required>
-              <option value="">-- Select --</option>
-              <option value="PRBC">Packed Red Blood Cells (PRBC)</option>
-              <option value="WB">Whole Blood (WB)</option>
-              <option value="RCC-LR">RCC-LR (Buffy Coat Removal)</option>
-              <option value="RCC-LD">RCC-LD (Leucodepleted)</option>
-              <option value="PRP">Platelet Rich Plasma (PRP)</option>
-              <option value="FFP">Fresh Frozen Plasma (FFP)</option>
-              <option value="PC">Platelet Concentrate (RDP)</option>
-              <option value="Cryo">Cryoprecipitated Antihemophilic Factor</option>
-              <option value="SDP">Single Donor Platelet (SDP)</option>
-              <option value="PlasmaAph">Plasma Apheresis</option>
-            </select>
-          </div>
-          <div class="col-md-8">
+      <div class="col-12"><hr></div>
+      <div class="col-md-4">
+        <label class="bb-label">Patient Full Name <span class="text-danger">*</span></label>
+        <input id="patientName" class="form-control" placeholder="Full name" required>
+      </div>
+      <div class="col-md-2">
+        <label class="bb-label">Age / Sex <span class="text-danger">*</span></label>
+        <input id="patientAgeSex" class="form-control" placeholder="45 / Male" required>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label">Ward / Bed No <span class="text-danger">*</span></label>
+        <input id="ward" class="form-control" placeholder="ICU-2" required>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label">Indoor / Reg No</label>
+        <input id="regNo" class="form-control" placeholder="IPD-2026-0451">
+      </div>
+      <div class="col-md-4">
+        <label class="bb-label">Doctor Name <span class="text-danger">*</span></label>
+        <input id="doctorName" class="form-control" placeholder="Dr. Mehta" required>
+      </div>
+      <div class="col-md-3">
+        <label class="bb-label">Contact No</label>
+        <input id="contactNo" class="form-control" placeholder="9876543210">
+      </div>
+      <div class="col-md-5">
+        <label class="bb-label">Diagnosis <span class="text-danger">*</span></label>
+        <input id="diagnosis" class="form-control" placeholder="e.g., Severe anemia" required>
+      </div>
+      <div class="col-md-4">
+        <label class="bb-label">Blood Component <span class="text-danger">*</span></label>
+        <select id="component" class="form-select" required>
+          <option value="">-- Select --</option>
+          <option value="PRBC">Packed Red Blood Cells (PRBC)</option>
+          <option value="WB">Whole Blood (WB)</option>
+          <option value="RCC-LR">RCC-LR (Buffy Coat Removal)</option>
+          <option value="RCC-LD">RCC-LD (Leucodepleted)</option>
+          <option value="PRP">Platelet Rich Plasma (PRP)</option>
+          <option value="FFP">Fresh Frozen Plasma (FFP)</option>
+          <option value="PC">Platelet Concentrate (RDP)</option>
+          <option value="Cryo">Cryoprecipitated Antihemophilic Factor</option>
+          <option value="SDP">Single Donor Platelet (SDP)</option>
+          <option value="PlasmaAph">Plasma Apheresis</option>
+        </select>
+      </div>
+                <div class="col-md-8">
             <label class="bb-label">Specific Requirement</label>
             <input id="specificReq" class="form-control" placeholder="e.g., Leucodepleted, Irradiated">
           </div>
 
-          <!-- Delivery Person -->
+          <!-- Delivery Person (Optional) -->
           <div class="col-12">
             <hr>
             <p class="mb-2" style="font-weight:700;font-size:0.85rem;color:var(--bb-muted);text-transform:uppercase;letter-spacing:0.05em;">
@@ -254,6 +246,7 @@ window.requiredRole = 'hospital';
             <label class="bb-label">Delivery Phone</label>
             <input id="deliveryPhone" class="form-control" placeholder="9876543210">
           </div>
+
         </form>
       </div>
     </div>
@@ -332,7 +325,7 @@ document.getElementById('requestForm').addEventListener('submit', async function
   document.getElementById('successPanel').style.display = 'none';
 
   try {
-    // 1. Get the hospital's real location from the database, fallback to browser GPS
+    // Use database location, fallback to browser GPS
     let hospitalLoc;
     try {
       const locRes = await fetch('/api/hospital/location', { headers: authHeaders() });
@@ -346,7 +339,7 @@ document.getElementById('requestForm').addEventListener('submit', async function
       hospitalLoc = await BBHospital.getHospitalLocation();
     }
 
-    // 2. Fetch blood banks
+    // Fetch blood banks
     const res = await fetch('/api/hospital/request', {
       method: 'POST',
       headers: authHeaders(),
@@ -362,17 +355,17 @@ document.getElementById('requestForm').addEventListener('submit', async function
       return;
     }
 
-    // 3. Sort by server's distance (already calculated)
+    // Sort by server's distance (already calculated)
     banks.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
 
-    // 4. Add missing map properties (plotBanks expects _lat, _lng)
+    // Add missing map properties (plotBanks expects _lat, _lng)
     banks.forEach(bank => {
       bank._lat = bank.lat;
       bank._lng = bank.lng;
       bank._isDemoLocation = false;
     });
 
-    // 5. Display results (cards), then init the map
+    // Display results (cards), then init the map
     displayResults(banks, bloodGroup, units, urgency, hospitalLoc);
     BBHospital.initMap('map', hospitalLoc);
     BBHospital.plotBanks(banks, hospitalLoc);
