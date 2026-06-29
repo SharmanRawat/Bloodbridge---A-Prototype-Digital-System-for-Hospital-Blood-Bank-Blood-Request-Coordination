@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const { query } = require('../db');
@@ -18,9 +19,8 @@ router.post('/register', async (req, res) => {
         [name, address || null, lat || 0, lng || 0, password, phone || null]
       );
       return res.json({ success: true, userId: rows[0].id, role: 'bloodbank' });
-    } else {
-      return res.status(400).json({ error: 'Invalid role' });
     }
+    res.status(400).json({ error: 'Invalid role' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Registration failed' });
