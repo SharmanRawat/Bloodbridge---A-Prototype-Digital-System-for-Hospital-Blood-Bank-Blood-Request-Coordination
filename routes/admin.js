@@ -4,22 +4,22 @@ const router = express.Router();
 const { query } = require('../db');
 const { requireRole } = require('../middleware/auth');
 
-// Protect every route in this file with admin role
+// Protect every route with admin role
 router.use(requireRole('admin'));
 
-// ---- GET all hospitals ----
+// --- GET all hospitals ---
 router.get('/hospitals', async (req, res) => {
   const { rows } = await query('SELECT id, name, address, lat, lng FROM hospital ORDER BY id ASC');
   res.json(rows);
 });
 
-// ---- GET all blood banks ----
+// --- GET all blood banks ---
 router.get('/bloodbanks', async (req, res) => {
   const { rows } = await query('SELECT id, name, address, phone, lat, lng, flagged FROM blood_bank ORDER BY id ASC');
   res.json(rows);
 });
 
-// ---- GET all requests (with hospital and blood bank names) ----
+// --- GET all requests ---
 router.get('/requests', async (req, res) => {
   const { status } = req.query;
   let sql = `
@@ -41,7 +41,7 @@ router.get('/requests', async (req, res) => {
   res.json(rows);
 });
 
-// ---- GET summary stats ----
+// --- GET summary stats ---
 router.get('/stats', async (req, res) => {
   const totalHospitals = (await query('SELECT COUNT(*) AS count FROM hospital')).rows[0].count;
   const totalBanks = (await query('SELECT COUNT(*) AS count FROM blood_bank')).rows[0].count;
@@ -55,34 +55,33 @@ router.get('/stats', async (req, res) => {
   res.json({ totalHospitals, totalBanks, totalRequests, pending, acknowledged, cancelled, ready, intransit, outfordelivery });
 });
 
-// ---- PUT reset hospital password ----
+// --- PUT reset hospital password ---
 router.put('/hospitals/:id/reset-password', async (req, res) => {
   const id = parseInt(req.params.id);
   const { rowCount } = await query("UPDATE hospital SET password = 'hospital123' WHERE id = $1", [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Hospital not found' });
-  res.json({ success: true, message: 'Password reset to hospital123' });
+  res.json({ success: true });
 });
 
-// ---- PUT reset blood bank password ----
+// --- PUT reset blood bank password ---
 router.put('/bloodbanks/:id/reset-password', async (req, res) => {
   const id = parseInt(req.params.id);
   const { rowCount } = await query("UPDATE blood_bank SET password = 'bank123' WHERE id = $1", [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Blood bank not found' });
-  res.json({ success: true, message: 'Password reset to bank123' });
+  res.json({ success: true });
 });
 
-// ---- PUT toggle blood bank flag ----
+// --- PUT toggle flag ---
 router.put('/bloodbanks/:id/toggle-flag', async (req, res) => {
   const id = parseInt(req.params.id);
   const { rows } = await query('SELECT flagged FROM blood_bank WHERE id = $1', [id]);
-  const bank = rows[0];
-  if (!bank) return res.status(404).json({ error: 'Blood bank not found' });
-  const newFlag = bank.flagged ? 0 : 1;
+  if (!rows.length) return res.status(404).json({ error: 'Blood bank not found' });
+  const newFlag = rows[0].flagged ? 0 : 1;
   await query('UPDATE blood_bank SET flagged = $1 WHERE id = $2', [newFlag, id]);
   res.json({ success: true, flagged: newFlag });
 });
 
-// ---- PUT cancel a request ----
+// --- PUT cancel request ---
 router.put('/requests/:id/cancel', async (req, res) => {
   const id = parseInt(req.params.id);
   const { rowCount } = await query(
@@ -93,7 +92,7 @@ router.put('/requests/:id/cancel', async (req, res) => {
   res.json({ success: true });
 });
 
-// ---- DELETE hospital ----
+// --- DELETE hospital ---
 router.delete('/hospitals/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   await query('DELETE FROM request WHERE hospital_id = $1', [id]);
@@ -102,7 +101,7 @@ router.delete('/hospitals/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-// ---- DELETE blood bank ----
+// --- DELETE blood bank ---
 router.delete('/bloodbanks/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   await query('DELETE FROM inventory WHERE blood_bank_id = $1', [id]);
@@ -114,7 +113,7 @@ router.delete('/bloodbanks/:id', async (req, res) => {
 
 module.exports = router;
 
-// ---- Separate login handler (no auth middleware) ----
+// --- Separate login handler (no auth middleware) ---
 module.exports.loginHandler = async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });

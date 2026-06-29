@@ -591,5 +591,23 @@ function reset() {
   document.getElementById('confirmPhone').innerHTML = '';
 }
 </script>
+<script>
+(function() {
+  // Show a warning if devtools are opened
+  let devtoolsOpen = false;
+  const threshold = 160; // minimum width difference that indicates devtools
+
+  setInterval(() => {
+    if (window.outerWidth - window.innerWidth > threshold) {
+      if (!devtoolsOpen) {
+        devtoolsOpen = true;
+        alert('⚠️ Developer tools detected. For security reasons, please close them.');
+      }
+    } else {
+      devtoolsOpen = false;
+    }
+  }, 1000);
+})();
+</script>
 </body>
 </html>

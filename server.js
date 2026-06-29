@@ -5,6 +5,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { query, initDB } = require('./db');
 const { requireRole } = require('./middleware/auth');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 app.use(express.json());
@@ -14,7 +15,6 @@ app.use(express.static('public'));
 const server = http.createServer(app);
 const io = new Server(server);
 
-// ---- Haversine ----
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -26,7 +26,6 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// ---- Socket.IO ----
 io.on('connection', (socket) => {
   socket.on('donor_location', ({ donorId, lat, lng }) => {
     if (!donorId || lat == null || lng == null) return;
@@ -36,7 +35,6 @@ io.on('connection', (socket) => {
           status = CASE WHEN status = 'Acknowledged' THEN 'InTransit' ELSE status END
       WHERE id = $3
     `, [lat, lng, donorId]);
-
     io.to(`request_${donorId}`).emit('update_donor_pos', { donorId, lat, lng, requestId: donorId });
   });
 
@@ -45,9 +43,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// ---- Hospital endpoints ----
+// ---- Admin routes (login is public, rest require auth) ----
+app.post('/api/admin/login', adminRoutes.loginHandler);   // login – NO auth
+app.use('/api/admin', adminRoutes);                       // all other admin routes require auth
 
-// Search blood banks
+// ---- Hospital endpoints ----
 app.post('/api/hospital/request', async (req, res) => {
   const { hospitalId, bloodGroup } = req.body;
   const { rows: hospRows } = await query('SELECT lat, lng FROM hospital WHERE id = $1', [hospitalId]);
@@ -74,7 +74,6 @@ app.post('/api/hospital/request', async (req, res) => {
   res.json(results.length ? results : { message: 'No stock available', banks: [] });
 });
 
-// Confirm request (with cancellation, stock check, and patient/delivery details)
 app.post('/api/hospital/request/confirm', requireRole('hospital'), async (req, res) => {
   const {
     hospitalId, bloodGroup, units, urgency = 'Normal', bankId,
@@ -87,19 +86,12 @@ app.post('/api/hospital/request/confirm', requireRole('hospital'), async (req, r
   const safeUnits = Number.isInteger(units) && units > 0 ? units : 1;
 
   try {
-    // Cancel previous pending for same hospital+blood group
-    await query(`UPDATE request SET status = 'Cancelled' WHERE hospital_id = $1 AND blood_group = $2 AND status = 'Pending'`,
-      [hospitalId, bloodGroup]);
-
-    // Check stock
-    const { rows: stockRows } = await query(
-      'SELECT units FROM inventory WHERE blood_bank_id = $1 AND blood_group = $2', [bankId, bloodGroup]
-    );
+    await query(`UPDATE request SET status = 'Cancelled' WHERE hospital_id = $1 AND blood_group = $2 AND status = 'Pending'`, [hospitalId, bloodGroup]);
+    const { rows: stockRows } = await query('SELECT units FROM inventory WHERE blood_bank_id = $1 AND blood_group = $2', [bankId, bloodGroup]);
     if (!stockRows.length || stockRows[0].units < safeUnits) {
       return res.status(400).json({ error: 'Not enough stock available' });
     }
 
-    // Insert request
     const { rows: reqRows } = await query(`
       INSERT INTO request (hospital_id, blood_group, units, urgency, blood_bank_id,
         component, patient_name, patient_age_sex, ward, reg_no,
@@ -113,8 +105,6 @@ app.post('/api/hospital/request/confirm', requireRole('hospital'), async (req, r
         delivery_name || null, delivery_phone || null]);
 
     const requestId = reqRows[0].id;
-
-    // Deduct stock
     const { rowCount } = await query(
       `UPDATE inventory SET units = units - $1, last_updated = CURRENT_TIMESTAMP
        WHERE blood_bank_id = $2 AND blood_group = $3 AND units >= $1`,
@@ -133,7 +123,6 @@ app.post('/api/hospital/request/confirm', requireRole('hospital'), async (req, r
   }
 });
 
-// Get all requests for a hospital
 app.get('/api/hospital/requests/:hospitalId', requireRole('hospital'), async (req, res) => {
   if (parseInt(req.params.hospitalId) !== req.userId) return res.status(403).json({ error: 'Access denied' });
   const { rows } = await query(`
@@ -146,7 +135,6 @@ app.get('/api/hospital/requests/:hospitalId', requireRole('hospital'), async (re
   res.json(rows);
 });
 
-// Get single request (for slip / OTP)
 app.get('/api/hospital/request/:id', async (req, res) => {
   const { rows } = await query(`
     SELECT r.*, h.name AS hospital_name, b.name AS bank_name,
@@ -160,7 +148,6 @@ app.get('/api/hospital/request/:id', async (req, res) => {
   res.json(rows[0]);
 });
 
-// Cancel request (hospital side)
 app.put('/api/hospital/request/:id/cancel', requireRole('hospital'), async (req, res) => {
   const { rows } = await query('SELECT * FROM request WHERE id = $1', [req.params.id]);
   const request = rows[0];
@@ -172,7 +159,6 @@ app.put('/api/hospital/request/:id/cancel', requireRole('hospital'), async (req,
   res.json({ success: true });
 });
 
-// Confirm delivery (hospital side)
 app.put('/api/hospital/request/:id/delivered', requireRole('hospital'), async (req, res) => {
   const { rows } = await query('SELECT * FROM request WHERE id = $1', [req.params.id]);
   const request = rows[0];
@@ -184,14 +170,12 @@ app.put('/api/hospital/request/:id/delivered', requireRole('hospital'), async (r
   res.json({ success: true });
 });
 
-// Hospital location
 app.get('/api/hospital/location', requireRole('hospital'), async (req, res) => {
   const { rows } = await query('SELECT lat, lng FROM hospital WHERE id = $1', [req.userId]);
   if (!rows.length) return res.status(404).json({ error: 'Hospital not found' });
   res.json(rows[0]);
 });
 
-// Track request (live map initial data)
 app.get('/api/hospital/track-request/:id', requireRole('hospital'), async (req, res) => {
   const { rows } = await query('SELECT tracker_lat, tracker_lng, tracker_updated, status FROM request WHERE id = $1', [req.params.id]);
   if (!rows.length) return res.status(404).json({ error: 'Request not found' });
@@ -216,7 +200,6 @@ app.post('/api/delivery/update-location', async (req, res) => {
   res.json({ success: true });
 });
 
-// Confirm pickup (delivery person)
 app.put('/api/delivery/confirm-pickup/:id', async (req, res) => {
   const { rows } = await query('SELECT id, status FROM request WHERE id = $1', [req.params.id]);
   if (!rows.length) return res.status(404).json({ error: 'Request not found' });
@@ -230,7 +213,6 @@ app.put('/api/delivery/confirm-pickup/:id', async (req, res) => {
 // ---- Mount route modules ----
 app.use('/api/bloodbank', require('./routes/bloodbank'));
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/admin', require('./routes/admin'));
 app.use('/api/donors', require('./routes/donors'));
 
 // ---- Start server ----
