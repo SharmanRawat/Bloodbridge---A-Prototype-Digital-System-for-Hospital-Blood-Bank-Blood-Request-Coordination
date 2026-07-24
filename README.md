@@ -21,16 +21,16 @@ bloodbridge/
 ├── routes/
 │   ├── hospital.js          # Hospital routes
 │   ├── bloodbank.js         # Blood bank routes
-│   └── auth.js              # (Coming soon)
+│   └── auth.js              # auth.js
 ├── public/
 │   ├── index.html           # Landing page
 │   ├── hospital.html        # Hospital dashboard
 │   ├── hospital_status.html # Request status page
 │   ├── bloodbank.html       # Blood bank dashboard
 │   ├── requisition.html     # Printable slip
-│   ├── login.html           # (Coming soon)
-│   ├── register.html        # (Coming soon)
-│   └── style.css            # (To be created by UI team)
+│   ├── login.html           # Login HTML Page
+│   ├── register.html        # Register HTML Page
+│   └── style.css            # UI/UX implemented in all the pages
 ├── package.json
 ├── .gitignore
 └── README.md
