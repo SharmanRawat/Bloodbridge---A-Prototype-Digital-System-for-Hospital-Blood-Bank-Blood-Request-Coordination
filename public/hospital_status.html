@@ -170,9 +170,12 @@ async function loadStatus() {
       }
       let actionButtons = '';
       if (['Pending','Acknowledged','InTransit','OutForDelivery'].includes(req.status)) actionButtons += `<button class="btn btn-sm btn-bb-outline-red ms-1" onclick="cancelRequest(${req.id})">Cancel</button>`;
-      if (req.status==='InTransit' || req.status==='OutForDelivery') actionButtons += `<button class="btn btn-sm btn-bb-red ms-1" onclick="confirmDelivery(${req.id})">Confirm Delivery</button>`;
-      const qrHtml = (req.status==='InTransit'||req.status==='Acknowledged') ? `
-        <div class="mt-2"><div class="qr-box"><small>📱 Scan to start delivery</small><div id="qr${req.id}"></div></div></div>` : '';
+      if (req.status==='OutForDelivery') actionButtons += `<button class="btn btn-sm btn-bb-red ms-1" onclick="confirmDelivery(${req.id})">Confirm Delivery</button>`;
+      const riderActive = ['Acknowledged','InTransit','Ready','OutForDelivery'].includes(req.status);
+      const riderUrl = `track-delivery.html?id=${e(req.id)}` + (req.delivery_token ? `&t=${encodeURIComponent(req.delivery_token)}` : '');
+      const qrHtml = riderActive ? `
+        <div class="mt-2"><div class="qr-box"><small>📱 Scan to start delivery</small><div id="qr${req.id}"></div>
+        <a class="small" href="${riderUrl}" target="_blank" rel="noopener">Open rider page</a></div></div>` : '';
       return `
         <div class="bb-card p-3 mb-3">
           <div class="d-flex justify-content-between align-items-start"><div class="w-100">
@@ -183,7 +186,7 @@ async function loadStatus() {
             ${req.delivery_name ? `<p class="mb-1 mt-1"><strong>🏍️ Rider:</strong> ${e(req.delivery_name)} (${e(req.delivery_phone||'N/A')})</p>` : ''}
             <small class="text-muted">${e(new Date(req.created_at).toLocaleString())}</small>
           </div><span class="status-badge ${statusClass}">${e(req.status)}</span></div>
-          ${req.status==='Acknowledged'&&req.pickup_otp?`<div class="otp-box mt-3"><strong>Pickup OTP:</strong><div class="otp-value">${e(req.pickup_otp)}</div><small class="text-muted">Share this code with the collection person</small></div>`:''}
+          ${(req.status==='Acknowledged'||req.status==='InTransit')&&req.pickup_otp?`<div class="otp-box mt-3"><strong>Pickup OTP:</strong><div class="otp-value">${e(req.pickup_otp)}</div><small class="text-muted">Share this code with the collection person</small></div>`:''}
           ${qrHtml}${trackerHtml}
           <div class="mt-2"><a href="requisition.html?id=${e(req.id)}" class="btn btn-sm btn-outline-secondary">View Slip</a>${actionButtons}</div>
         </div>`;
@@ -212,8 +215,8 @@ async function loadStatus() {
     // Generate QR codes & initialize new maps
     data.forEach(req => {
       if (req.delivery_name) deliveryInfo[req.id] = { name: req.delivery_name, phone: req.delivery_phone||'N/A' };
-      if ((req.status==='InTransit'||req.status==='Acknowledged') && document.getElementById(`qr${req.id}`) && document.getElementById(`qr${req.id}`).childElementCount===0) {
-        new QRCode(document.getElementById(`qr${req.id}`), { text: `${location.origin}/track-delivery.html?id=${req.id}` + (req.delivery_token ? `&t=${req.delivery_token}` : ''), width:80, height:80 });
+      if (['Acknowledged','InTransit','Ready','OutForDelivery'].includes(req.status) && req.delivery_token && document.getElementById(`qr${req.id}`) && document.getElementById(`qr${req.id}`).childElementCount===0) {
+        new QRCode(document.getElementById(`qr${req.id}`), { text: `${location.origin}/track-delivery.html?id=${req.id}&t=${encodeURIComponent(req.delivery_token)}`, width:80, height:80 });
       }
       if ((req.status==='InTransit' || req.status==='OutForDelivery') && !trackerMaps[req.id] && document.getElementById(`trackerMap${req.id}`)) {
         initTrackerMap(`trackerMap${req.id}`, req.id);

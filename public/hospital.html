@@ -517,20 +517,29 @@ function startPendingRequestTimer(requestId) {
     secondsLeft--;
   }, 1000);
 
+  const showResolved = (status) => {
+    clearInterval(tickInterval);
+    clearInterval(pollInterval);
+    clearTimeout(expirationTimeout);
+    timerEl.textContent = '';
+    tryAnotherBtn.style.display = 'none';
+    if (!successMessageEl) return;
+    if (status === 'Cancelled') {
+      successMessageEl.innerHTML = '<i class="fa-solid fa-circle-xmark text-danger me-1"></i> This request was cancelled.';
+    } else {
+      successMessageEl.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Your request has been accepted.';
+    }
+    successMessageEl.style.display = 'block';
+  };
+
   const checkStatus = async () => {
     try {
-      const res = await fetch(`/api/hospital/request/${requestId}`);
+      const res = await fetch(`/api/hospital/request/${requestId}`, { headers: authHeaders() });
+      // Never treat an auth/network failure as an acknowledgement.
+      if (!res.ok) return;
       const req = await res.json();
-      if (req && req.status !== 'Pending') {
-        clearInterval(tickInterval);
-        clearInterval(pollInterval);
-        clearTimeout(expirationTimeout);
-        timerEl.textContent = '';
-        tryAnotherBtn.style.display = 'none';
-        if (successMessageEl) {
-          successMessageEl.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Your request has been accepted.';
-          successMessageEl.style.display = 'block';
-        }
+      if (req && typeof req.status === 'string' && req.status !== 'Pending') {
+        showResolved(req.status);
       }
     } catch (err) {
       console.error(err);
@@ -544,18 +553,19 @@ function startPendingRequestTimer(requestId) {
     clearInterval(tickInterval);
     clearInterval(pollInterval);
     try {
-      const res = await fetch(`/api/hospital/request/${requestId}`);
+      const res = await fetch(`/api/hospital/request/${requestId}`, { headers: authHeaders() });
+      if (!res.ok) {
+        // Could not confirm the status – keep the safe "still waiting" state.
+        timerEl.textContent = 'Still waiting for this blood bank.';
+        tryAnotherBtn.style.display = 'block';
+        return;
+      }
       const req = await res.json();
-      if (req && req.status === 'Pending') {
+      if (!req || typeof req.status !== 'string' || req.status === 'Pending') {
         timerEl.textContent = 'Still waiting for this blood bank.';
         tryAnotherBtn.style.display = 'block';
       } else {
-        timerEl.textContent = '';
-        tryAnotherBtn.style.display = 'none';
-        if (successMessageEl) {
-          successMessageEl.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Your request has been accepted.';
-          successMessageEl.style.display = 'block';
-        }
+        showResolved(req.status);
       }
     } catch (err) {
       console.error(err);

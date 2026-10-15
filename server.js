@@ -246,7 +246,7 @@ app.post('/api/delivery/update-location', async (req, res) => {
   if (!reqRow.delivery_token || !token || !safeEqual(token, reqRow.delivery_token)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  if (!['Acknowledged','InTransit'].includes(reqRow.status))
+  if (!['Acknowledged','InTransit','Ready','OutForDelivery'].includes(reqRow.status))
     return res.status(400).json({ error: 'Request cannot be tracked at this stage' });
   await query(`
     UPDATE request
