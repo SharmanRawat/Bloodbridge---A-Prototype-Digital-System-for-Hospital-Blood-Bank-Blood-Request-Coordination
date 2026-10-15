@@ -1,7 +1,12 @@
 (function() {
   const role = localStorage.getItem('role');
   const userId = localStorage.getItem('userId');
-  if (!role || !userId) {
+  const token = localStorage.getItem('token');
+  if (!role || !userId || !token) {
+    localStorage.removeItem('role');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('token');
     window.location.href = 'login.html';
     return;
   }

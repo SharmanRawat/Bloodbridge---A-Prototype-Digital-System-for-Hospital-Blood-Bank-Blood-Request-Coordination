@@ -15,6 +15,7 @@
 <div class="container">
   <h3>🩸 Start Delivery</h3>
   <input type="number" id="requestId" class="form-control mb-3" placeholder="Enter Request ID (e.g. 25)">
+  <input type="text" id="accessCode" class="form-control mb-3" placeholder="Access code (from the QR / link)">
   <button class="btn btn-bb-red w-100" onclick="start()">Start Delivery</button>
   <p id="errorMsg" class="text-danger mt-2"></p>
 </div>
@@ -22,7 +23,9 @@
 function start() {
   const id = document.getElementById('requestId').value.trim();
   if (!id || isNaN(id)) { document.getElementById('errorMsg').textContent='Please enter a valid Request ID.'; return; }
-  window.location.href = `track-delivery.html?id=${id}`;
+  const t = document.getElementById('accessCode').value.trim();
+  const qs = t ? `?id=${encodeURIComponent(id)}&t=${encodeURIComponent(t)}` : `?id=${encodeURIComponent(id)}`;
+  window.location.href = `track-delivery.html${qs}`;
 }
 </script>
 </body>

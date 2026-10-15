@@ -9,6 +9,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
+<script src="bb-auth.js"></script>
 <style>
   :root{ --bb-red:#C62828; --bb-bg:#f8f9fa; --bb-text:#212529; --bb-muted:#6c757d; --bb-border:#dee2e6; --bb-radius:12px; }
   body{background:var(--bb-bg);color:var(--bb-text);font-family:system-ui,-apple-system,sans-serif;}
@@ -73,7 +74,7 @@ const deliveryInfo = {};
 const socket = io();
 
 function authHeaders() {
-  return { 'x-user-id': localStorage.getItem('userId')||'', 'x-user-role': localStorage.getItem('role')||'' };
+  return { 'Authorization': 'Bearer ' + (localStorage.getItem('token')||'') };
 }
 
 // ---- Live tracking ----
@@ -116,10 +117,10 @@ function initTrackerMap(containerId, requestId) {
     maxZoom: 19
   }).addTo(map);
   trackerMaps[requestId] = { map };
-  socket.emit('watch_request', { requestId });
+  socket.emit('watch_request', { requestId, token: localStorage.getItem('token') || '' });
   fetch(`/api/hospital/track-request/${requestId}`, { headers: authHeaders() })
     .then(res => res.json())
-    .then(data => { if (data.lat && data.lng) updateDonorMarker(requestId, data.lat, data.lng, map); })
+    .then(data => { if (data.tracker_lat != null && data.tracker_lng != null) updateDonorMarker(requestId, data.tracker_lat, data.tracker_lng, map); })
     .catch(err => console.error('Initial tracker fetch error:', err));
 }
 
@@ -154,6 +155,7 @@ async function loadStatus() {
     });
 
     document.getElementById('statusList').innerHTML = data.map(req => {
+      const e = escapeHtml;
       const statusClass = {
         'Pending':'status-pending', 'Acknowledged':'status-acknowledged', 'Cancelled':'status-cancelled',
         'InTransit':'status-intransit', 'OutForDelivery':'status-outfordelivery', 'Delivered':'status-delivered'
@@ -174,16 +176,16 @@ async function loadStatus() {
       return `
         <div class="bb-card p-3 mb-3">
           <div class="d-flex justify-content-between align-items-start"><div class="w-100">
-            <h5 class="mb-1">Request #${req.id} – ${req.blood_group}</h5>
-            <p class="mb-1 text-muted">Units: ${req.units} | Urgency: ${req.urgency}</p>
-            <p class="mb-1">Blood Bank: ${req.bank_name||'N/A'}</p>
-            ${req.patient_name?`<div class="patient-info"><strong>Patient:</strong> ${req.patient_name} (${req.patient_age_sex||''})<br><strong>Ward/Reg:</strong> ${req.ward||'N/A'} / ${req.reg_no||'N/A'}<br><strong>Doctor:</strong> ${req.doctor_name||'N/A'} | <strong>Contact:</strong> ${req.contact_no||'N/A'}<br><strong>Diagnosis:</strong> ${req.diagnosis||'N/A'}<br><strong>Component:</strong> ${req.component||'PRBC'} ${req.specific_requirement?'('+req.specific_requirement+')':''}</div>`:''}
-            ${req.delivery_name ? `<p class="mb-1 mt-1"><strong>🏍️ Rider:</strong> ${req.delivery_name} (${req.delivery_phone||'N/A'})</p>` : ''}
-            <small class="text-muted">${new Date(req.created_at).toLocaleString()}</small>
-          </div><span class="status-badge ${statusClass}">${req.status}</span></div>
-          ${req.status==='Acknowledged'&&req.pickup_otp?`<div class="otp-box mt-3"><strong>Pickup OTP:</strong><div class="otp-value">${req.pickup_otp}</div><small class="text-muted">Share this code with the collection person</small></div>`:''}
+            <h5 class="mb-1">Request #${e(req.id)} – ${e(req.blood_group)}</h5>
+            <p class="mb-1 text-muted">Units: ${e(req.units)} | Urgency: ${e(req.urgency)}</p>
+            <p class="mb-1">Blood Bank: ${e(req.bank_name||'N/A')}</p>
+            ${req.patient_name?`<div class="patient-info"><strong>Patient:</strong> ${e(req.patient_name)} (${e(req.patient_age_sex||'')})<br><strong>Ward/Reg:</strong> ${e(req.ward||'N/A')} / ${e(req.reg_no||'N/A')}<br><strong>Doctor:</strong> ${e(req.doctor_name||'N/A')} | <strong>Contact:</strong> ${e(req.contact_no||'N/A')}<br><strong>Diagnosis:</strong> ${e(req.diagnosis||'N/A')}<br><strong>Component:</strong> ${e(req.component||'PRBC')} ${req.specific_requirement?'('+e(req.specific_requirement)+')':''}</div>`:''}
+            ${req.delivery_name ? `<p class="mb-1 mt-1"><strong>🏍️ Rider:</strong> ${e(req.delivery_name)} (${e(req.delivery_phone||'N/A')})</p>` : ''}
+            <small class="text-muted">${e(new Date(req.created_at).toLocaleString())}</small>
+          </div><span class="status-badge ${statusClass}">${e(req.status)}</span></div>
+          ${req.status==='Acknowledged'&&req.pickup_otp?`<div class="otp-box mt-3"><strong>Pickup OTP:</strong><div class="otp-value">${e(req.pickup_otp)}</div><small class="text-muted">Share this code with the collection person</small></div>`:''}
           ${qrHtml}${trackerHtml}
-          <div class="mt-2"><a href="requisition.html?id=${req.id}" class="btn btn-sm btn-outline-secondary">View Slip</a>${actionButtons}</div>
+          <div class="mt-2"><a href="requisition.html?id=${e(req.id)}" class="btn btn-sm btn-outline-secondary">View Slip</a>${actionButtons}</div>
         </div>`;
     }).join('');
 
@@ -211,7 +213,7 @@ async function loadStatus() {
     data.forEach(req => {
       if (req.delivery_name) deliveryInfo[req.id] = { name: req.delivery_name, phone: req.delivery_phone||'N/A' };
       if ((req.status==='InTransit'||req.status==='Acknowledged') && document.getElementById(`qr${req.id}`) && document.getElementById(`qr${req.id}`).childElementCount===0) {
-        new QRCode(document.getElementById(`qr${req.id}`), { text: `${location.origin}/track-delivery.html?id=${req.id}`, width:80, height:80 });
+        new QRCode(document.getElementById(`qr${req.id}`), { text: `${location.origin}/track-delivery.html?id=${req.id}` + (req.delivery_token ? `&t=${req.delivery_token}` : ''), width:80, height:80 });
       }
       if ((req.status==='InTransit' || req.status==='OutForDelivery') && !trackerMaps[req.id] && document.getElementById(`trackerMap${req.id}`)) {
         initTrackerMap(`trackerMap${req.id}`, req.id);

@@ -363,12 +363,18 @@
   </div>
 </div>
 
+<script src="bb-auth.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   // ---- Auth guard ----
   (function() {
     const role = localStorage.getItem('role');
-    if (role !== 'admin') {
+    const token = localStorage.getItem('token');
+    if (role !== 'admin' || !token) {
+      localStorage.removeItem('role');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('token');
       window.location.href = 'admin-login.html';
     }
     const name = localStorage.getItem('userName') || 'Admin';
@@ -387,8 +393,7 @@
   function authHeaders() {
     return {
       'Content-Type': 'application/json',
-      'x-user-id': localStorage.getItem('userId') || '',
-      'x-user-role': localStorage.getItem('role') || ''
+      'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
     };
   }
 
@@ -443,22 +448,25 @@
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No hospitals found.</td></tr>';
         return;
       }
-      tbody.innerHTML = data.map(h => `
+      tbody.innerHTML = data.map(h => {
+        const e = escapeHtml;
+        return `
         <tr>
-          <td><span class="text-muted">#${h.id}</span></td>
-          <td><strong>${h.name}</strong></td>
-          <td>${h.address || '<span class="text-muted">—</span>'}</td>
-          <td>${h.phone || '<span class="text-muted">—</span>'}</td>
+          <td><span class="text-muted">#${e(h.id)}</span></td>
+          <td><strong>${e(h.name)}</strong></td>
+          <td>${h.address ? e(h.address) : '<span class="text-muted">—</span>'}</td>
+          <td>${h.phone ? e(h.phone) : '<span class="text-muted">—</span>'}</td>
           <td>
-            <button class="btn btn-bb-ghost btn-sm me-1" onclick="resetHospitalPwd(${h.id}, '${h.name}')">
+            <button class="btn btn-bb-ghost btn-sm me-1" data-name="${e(h.name)}" onclick="resetHospitalPwd(${h.id}, this.dataset.name)">
               <i class="fa-solid fa-key me-1"></i>Reset Pwd
             </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteHospital(${h.id}, '${h.name}')">
+            <button class="btn btn-sm btn-outline-danger" data-name="${e(h.name)}" onclick="deleteHospital(${h.id}, this.dataset.name)">
               <i class="fa-solid fa-trash"></i>
             </button>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     } catch (err) {
       tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Failed to load hospitals.</td></tr>';
     }
@@ -475,12 +483,14 @@
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No blood banks found.</td></tr>';
         return;
       }
-      tbody.innerHTML = data.map(b => `
+      tbody.innerHTML = data.map(b => {
+        const e = escapeHtml;
+        return `
         <tr>
-          <td><span class="text-muted">#${b.id}</span></td>
-          <td><strong>${b.name}</strong></td>
-          <td>${b.address || '<span class="text-muted">—</span>'}</td>
-          <td>${b.phone || '<span class="text-muted">—</span>'}</td>
+          <td><span class="text-muted">#${e(b.id)}</span></td>
+          <td><strong>${e(b.name)}</strong></td>
+          <td>${b.address ? e(b.address) : '<span class="text-muted">—</span>'}</td>
+          <td>${b.phone ? e(b.phone) : '<span class="text-muted">—</span>'}</td>
           <td>
             ${b.flagged
               ? '<span class="badge-flagged"><i class="fa-solid fa-flag me-1"></i>Flagged</span>'
@@ -488,18 +498,19 @@
             }
           </td>
           <td>
-            <button class="btn btn-bb-ghost btn-sm me-1" onclick="resetBankPwd(${b.id}, '${b.name}')">
+            <button class="btn btn-bb-ghost btn-sm me-1" data-name="${e(b.name)}" onclick="resetBankPwd(${b.id}, this.dataset.name)">
               <i class="fa-solid fa-key me-1"></i>Reset Pwd
             </button>
-            <button class="btn btn-sm btn-outline-warning me-1" onclick="toggleFlag(${b.id}, '${b.name}', ${b.flagged})">
+            <button class="btn btn-sm btn-outline-warning me-1" data-name="${e(b.name)}" onclick="toggleFlag(${b.id}, this.dataset.name, ${b.flagged})">
               <i class="fa-solid fa-flag me-1"></i>${b.flagged ? 'Unflag' : 'Flag'}
             </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteBank(${b.id}, '${b.name}')">
+            <button class="btn btn-sm btn-outline-danger" data-name="${e(b.name)}" onclick="deleteBank(${b.id}, this.dataset.name)">
               <i class="fa-solid fa-trash"></i>
             </button>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     } catch (err) {
       tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Failed to load blood banks.</td></tr>';
     }
@@ -519,16 +530,18 @@
         tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No requests found.</td></tr>';
         return;
       }
-      tbody.innerHTML = data.map(r => `
+      tbody.innerHTML = data.map(r => {
+        const e = escapeHtml;
+        return `
         <tr>
-          <td><span class="text-muted">#${r.id}</span></td>
-          <td>${r.hospital_name || '<span class="text-muted">—</span>'}</td>
-          <td>${r.bank_name || '<span class="text-muted">—</span>'}</td>
-          <td><strong>${r.blood_group}</strong></td>
-          <td>${r.units}</td>
-          <td>${r.urgency}</td>
+          <td><span class="text-muted">#${e(r.id)}</span></td>
+          <td>${r.hospital_name ? e(r.hospital_name) : '<span class="text-muted">—</span>'}</td>
+          <td>${r.bank_name ? e(r.bank_name) : '<span class="text-muted">—</span>'}</td>
+          <td><strong>${e(r.blood_group)}</strong></td>
+          <td>${e(r.units)}</td>
+          <td>${e(r.urgency)}</td>
           <td>${statusBadge(r.status)}</td>
-          <td><small>${new Date(r.created_at).toLocaleString()}</small></td>
+          <td><small>${e(new Date(r.created_at).toLocaleString())}</small></td>
           <td>
             ${r.status === 'Pending'
               ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelRequest(${r.id})">
@@ -538,7 +551,8 @@
             }
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     } catch (err) {
       tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-4">Failed to load requests.</td></tr>';
     }

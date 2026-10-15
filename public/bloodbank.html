@@ -187,13 +187,13 @@ window.requiredRole = 'bloodbank';
 </script>
 
 <!-- Blood bank dashboard script with auth headers and improved inventory -->
+<script src="bb-auth.js"></script>
 <script>
 // ----- Helper for authentication headers -----
 function authHeaders() {
   return {
     'Content-Type': 'application/json',
-    'x-user-id': localStorage.getItem('userId') || '',
-    'x-user-role': localStorage.getItem('role') || ''
+    'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
   };
 }
 
@@ -304,25 +304,27 @@ async function loadRequests() {
       container.innerHTML = '<div class="alert alert-info">No incoming requests.</div>';
       return;
     }
-    container.innerHTML = data.map(req => `
+    container.innerHTML = data.map(req => {
+      const e = escapeHtml;
+      return `
     <div class="bb-card mb-3 p-3">
       <div class="d-flex justify-content-between align-items-start">
         <div>
-          <h5 class="mb-1">Request #${req.id} (${req.blood_group})</h5>
-          <p class="mb-1 text-muted">Hospital: ${req.hospital_name} | Units: ${req.units} | Urgency: ${req.urgency}</p>
+          <h5 class="mb-1">Request #${e(req.id)} (${e(req.blood_group)})</h5>
+          <p class="mb-1 text-muted">Hospital: ${e(req.hospital_name)} | Units: ${e(req.units)} | Urgency: ${e(req.urgency)}</p>
           ${req.patient_name ? `
           <div class="mt-2 p-2 bg-light rounded">
-            <strong>Patient:</strong> ${req.patient_name} (${req.patient_age_sex || 'N/A'})<br>
-            <strong>Ward / Reg:</strong> ${req.ward || 'N/A'} / ${req.reg_no || 'N/A'}<br>
-            <strong>Doctor:</strong> ${req.doctor_name || 'N/A'} | <strong>Contact:</strong> ${req.contact_no || 'N/A'}<br>
-            <strong>Diagnosis:</strong> ${req.diagnosis || 'N/A'}<br>
-            <strong>Component:</strong> ${req.component || 'PRBC'} ${req.specific_requirement ? '(' + req.specific_requirement + ')' : ''}
+            <strong>Patient:</strong> ${e(req.patient_name)} (${e(req.patient_age_sex || "N/A")})<br>
+            <strong>Ward / Reg:</strong> ${e(req.ward || "N/A")} / ${e(req.reg_no || "N/A")}<br>
+            <strong>Doctor:</strong> ${e(req.doctor_name || "N/A")} | <strong>Contact:</strong> ${e(req.contact_no || "N/A")}<br>
+            <strong>Diagnosis:</strong> ${e(req.diagnosis || "N/A")}<br>
+            <strong>Component:</strong> ${e(req.component || "PRBC")} ${req.specific_requirement ? '(' + req.specific_requirement + ')' : ''}
           </div>
           ` : ''}
-        ${req.delivery_name ? `<p class="mb-1 mt-1"><strong>Rider:</strong> ${req.delivery_name} (${req.delivery_phone || 'N/A'})</p>` : ''}
-        <small>${new Date(req.created_at).toLocaleString()}</small>
+        ${req.delivery_name ? `<p class="mb-1 mt-1"><strong>Rider:</strong> ${e(req.delivery_name)} (${e(req.delivery_phone || "N/A")})</p>` : ''}
+        <small>${e(new Date(req.created_at).toLocaleString())}</small>
         </div>
-        <span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Cancelled' ? 'secondary' : 'success'}">${req.status}</span>
+        <span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Cancelled' ? 'secondary' : 'success'}">${e(req.status)}</span>
       </div>
       ${req.status === 'Pending' ? `
         <button class="btn btn-sm btn-success mt-2" onclick="acknowledgeRequest(${req.id})">Acknowledge</button>
@@ -334,7 +336,8 @@ async function loadRequests() {
         <span id="verifyMsg${req.id}" class="ms-2"></span>
       </div>` : ''}
     </div>
-  `).join('');
+  `;
+    }).join('');
   } catch (err) {
     console.error(err);
     document.getElementById('requestsList').innerHTML = '<div class="alert alert-danger">Failed to load requests.</div>';
@@ -397,15 +400,15 @@ async function loadInventory() {
             const lowStock = item.units <= 3;
             return `
               <tr>
-                <td>${item.blood_group}</td>
+                <td>${escapeHtml(item.blood_group)}</td>
                 <td>
                   ${item.units}
                   ${lowStock ? '<span class="badge bg-warning text-dark ms-2">Low Stock</span>' : ''}
                 </td>
-                <td>${new Date(item.last_updated).toLocaleString()}</td>
+                <td>${escapeHtml(new Date(item.last_updated).toLocaleString())}</td>
                 <td>
                   ${lowStock ? `
-                    <button class="btn btn-sm btn-bb-red" onclick="findDonorsForGroup('${item.blood_group}')">
+                    <button class="btn btn-sm btn-bb-red" onclick="findDonorsForGroup(\'${escapeHtml(item.blood_group)}\')">
                       <i class="fa-solid fa-magnifying-glass me-1"></i> Find Donors
                     </button>` : ''}
                 </td>
@@ -507,10 +510,10 @@ async function searchDonors() {
       <div class="bb-card p-3 mb-2">
         <div class="d-flex justify-content-between align-items-center">
           <div>
-            <strong>${d.name}</strong> (${d.city || 'N/A'})
-            ${d.distance ? ` – <small>${d.distance.toFixed(1)} km away</small>` : ''}
+            <strong>${escapeHtml(d.name)}</strong> (${escapeHtml(d.city || 'N/A')})
+            ${d.distance ? ` – <small>${escapeHtml(d.distance.toFixed(1))} km away</small>` : ''}
           </div>
-          <a href="tel:${d.phone}" class="btn btn-sm btn-bb-red">
+          <a href="tel:${escapeHtml(d.phone)}" class="btn btn-sm btn-bb-red">
             <i class="fa-solid fa-phone"></i> Call
           </a>
         </div>

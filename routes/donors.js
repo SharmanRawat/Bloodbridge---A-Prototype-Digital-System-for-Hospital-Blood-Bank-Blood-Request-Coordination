@@ -3,17 +3,22 @@ const router = express.Router();
 const { query } = require('../db');
 const { requireRole } = require('../middleware/auth');
 
+const BLOOD_GROUPS = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
+
 router.post('/register', async (req, res) => {
   const { name, blood_group, phone, city, lat, lng, patient_ref } = req.body;
   if (!name || !blood_group || !phone) return res.status(400).json({ error: 'Name, blood group, and phone are required.' });
+  if (!BLOOD_GROUPS.includes(blood_group)) return res.status(400).json({ error: 'Invalid blood group.' });
   try {
+    const safeLat = Number.isFinite(Number(lat)) ? Number(lat) : null;
+    const safeLng = Number.isFinite(Number(lng)) ? Number(lng) : null;
     const { rows } = await query(
       'INSERT INTO donors (name, blood_group, phone, city, lat, lng, patient_ref) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
-      [name, blood_group, phone, city || null, lat || null, lng || null, patient_ref || null]
+      [name, blood_group, phone, city || null, safeLat, safeLng, patient_ref || null]
     );
     res.json({ success: true, donorId: rows[0].id });
   } catch (err) {
-    console.error(err);
+    console.error('Donor registration error:', err.message);
     res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -22,6 +27,7 @@ router.get('/nearby', requireRole('bloodbank'), async (req, res) => {
   const { blood_group, lat, lng } = req.query;
   if (!blood_group || !lat || !lng) return res.status(400).json({ error: 'Missing parameters' });
   const bankLat = parseFloat(lat), bankLng = parseFloat(lng);
+  if (!Number.isFinite(bankLat) || !Number.isFinite(bankLng)) return res.status(400).json({ error: 'Invalid coordinates' });
   const { rows } = await query('SELECT * FROM donors WHERE blood_group = $1', [blood_group]);
   function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371;
@@ -32,7 +38,7 @@ router.get('/nearby', requireRole('bloodbank'), async (req, res) => {
   }
   const results = rows.map(d => ({
     id: d.id, name: d.name, phone: d.phone, city: d.city,
-    distance: d.lat && d.lng ? getDistance(bankLat, bankLng, d.lat, d.lng) : null
+    distance: d.lat != null && d.lng != null ? getDistance(bankLat, bankLng, d.lat, d.lng) : null
   })).sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   res.json(results);
 });

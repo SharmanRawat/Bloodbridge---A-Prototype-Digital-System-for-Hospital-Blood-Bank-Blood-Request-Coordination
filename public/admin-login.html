@@ -169,6 +169,7 @@
       }
 
       // Store admin session
+      localStorage.setItem('token', data.token || '');
       localStorage.setItem('userId', data.adminId);
       localStorage.setItem('role', 'admin');
       localStorage.setItem('userName', data.username);

@@ -1,10 +1,11 @@
-// routes/admin.js – PostgreSQL version
+// routes/admin.js
 const express = require('express');
 const router = express.Router();
 const { query } = require('../db');
-const { requireRole } = require('../middleware/auth');
+const { requireRole, signToken } = require('../middleware/auth');
+const { hashPassword, verifyPassword } = require('../lib/passwords');
 
-// Protect every route with admin role
+// Protect every route with admin role (token based)
 router.use(requireRole('admin'));
 
 // --- GET all hospitals ---
@@ -55,20 +56,20 @@ router.get('/stats', async (req, res) => {
   res.json({ totalHospitals, totalBanks, totalRequests, pending, acknowledged, cancelled, ready, intransit, outfordelivery });
 });
 
-// --- PUT reset hospital password ---
+// --- PUT reset hospital password (stores a hash of the default) ---
 router.put('/hospitals/:id/reset-password', async (req, res) => {
   const id = parseInt(req.params.id);
-  const { rowCount } = await query("UPDATE hospital SET password = 'hospital123' WHERE id = $1", [id]);
+  const { rowCount } = await query('UPDATE hospital SET password = $1 WHERE id = $2', [hashPassword('hospital123'), id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Hospital not found' });
-  res.json({ success: true });
+  res.json({ success: true, defaultPassword: 'hospital123' });
 });
 
-// --- PUT reset blood bank password ---
+// --- PUT reset blood bank password (stores a hash of the default) ---
 router.put('/bloodbanks/:id/reset-password', async (req, res) => {
   const id = parseInt(req.params.id);
-  const { rowCount } = await query("UPDATE blood_bank SET password = 'bank123' WHERE id = $1", [id]);
+  const { rowCount } = await query('UPDATE blood_bank SET password = $1 WHERE id = $2', [hashPassword('bank123'), id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Blood bank not found' });
-  res.json({ success: true });
+  res.json({ success: true, defaultPassword: 'bank123' });
 });
 
 // --- PUT toggle flag ---
@@ -117,8 +118,16 @@ module.exports = router;
 module.exports.loginHandler = async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
-  const { rows } = await query('SELECT * FROM admin WHERE username = $1 AND password = $2', [username, password]);
-  if (rows.length === 0) return res.status(401).json({ error: 'Invalid username or password' });
-  const admin = rows[0];
-  res.json({ success: true, adminId: admin.id, username: admin.username });
+  try {
+    const { rows } = await query('SELECT * FROM admin WHERE username = $1', [username]);
+    if (!rows.length || !verifyPassword(password, rows[0].password)) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+    const admin = rows[0];
+    const token = signToken({ uid: admin.id, role: 'admin' });
+    res.json({ success: true, token, adminId: admin.id, username: admin.username, role: 'admin' });
+  } catch (err) {
+    console.error('Admin login error:', err.message);
+    res.status(500).json({ error: 'Login failed' });
+  }
 };

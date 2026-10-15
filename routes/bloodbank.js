@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../db');
 const { requireRole } = require('../middleware/auth');
+const { safeEqual } = require('../middleware/auth');
+
+const BLOOD_GROUPS = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
 
 // Get incoming requests
 router.get('/requests/:bankId', requireRole('bloodbank'), async (req, res) => {
@@ -39,9 +42,9 @@ router.post('/request/:id/verify-pickup', requireRole('bloodbank'), async (req, 
   const request = rows[0];
   if (!request) return res.status(404).json({ error: 'Request not found' });
   if (request.blood_bank_id !== req.userId) return res.status(403).json({ error: 'Access denied' });
-  if (!['Acknowledged','InTransit'].includes(request.status))
+  if (!['Acknowledged', 'InTransit'].includes(request.status))
     return res.status(400).json({ error: 'Request cannot be verified now' });
-  if (String(request.pickup_otp).trim() !== String(otp).trim())
+  if (!request.pickup_otp || !safeEqual(String(otp || '').trim(), String(request.pickup_otp).trim()))
     return res.status(400).json({ success: false, message: 'Invalid OTP' });
   await query("UPDATE request SET status = 'Ready' WHERE id = $1", [req.params.id]);
   res.json({ success: true, message: 'Pickup verified' });
@@ -57,11 +60,17 @@ router.get('/inventory/:bankId', requireRole('bloodbank'), async (req, res) => {
 router.put('/inventory/:bankId', requireRole('bloodbank'), async (req, res) => {
   if (parseInt(req.params.bankId) !== req.userId) return res.status(403).json({ error: 'Access denied' });
   const { bloodGroup, units } = req.body;
-  const safeUnits = Math.max(0, units);
-  const { rows } = await query('SELECT id FROM inventory WHERE blood_bank_id = $1 AND blood_group = $2', [req.params.bankId, bloodGroup]);
-  if (rows.length) {
-    await query('UPDATE inventory SET units = $1, last_updated = CURRENT_TIMESTAMP WHERE id = $2', [safeUnits, rows[0].id]);
-  } else {
+  if (!BLOOD_GROUPS.includes(bloodGroup)) return res.status(400).json({ error: 'Invalid blood group' });
+  const parsed = Number(units);
+  const safeUnits = Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+
+  // Update every matching row (tolerates pre-existing duplicate rows without
+  // creating new ones).
+  const { rowCount } = await query(
+    'UPDATE inventory SET units = $1, last_updated = CURRENT_TIMESTAMP WHERE blood_bank_id = $2 AND blood_group = $3',
+    [safeUnits, req.params.bankId, bloodGroup]
+  );
+  if (rowCount === 0) {
     await query('INSERT INTO inventory (blood_bank_id, blood_group, units) VALUES ($1,$2,$3)', [req.params.bankId, bloodGroup, safeUnits]);
   }
   res.json({ success: true, message: 'Inventory updated' });

@@ -41,8 +41,15 @@ Currently, hospital staff manually call multiple blood banks, find a match, fill
 ```
 
 ## Environment Variables
-Set the following environment variable before starting the app:
-- `DATABASE_URL` - PostgreSQL connection string (e.g., from Neon, Render Postgres, or Supabase)
+Set the following environment variables before starting the app:
+- `DATABASE_URL` - PostgreSQL connection string (e.g., from Neon, Render Postgres, or Supabase). On Render/Supabase use the **connection pooler** string (IPv4).
+- `AUTH_SECRET` - a long random string used to sign login sessions. **Set this in production**; if it is missing the app still runs but every restart/redeploy logs users out.
+- `PORT` - optional, defaults to `3000`.
+
+Generate a secret with:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
 ## How to Run Locally
 1. **Clone** the repo:
@@ -60,6 +67,7 @@ Set the following environment variable before starting the app:
    Create a `.env` file in the root directory with:
    ```env
    DATABASE_URL=postgresql://user:password@host:port/database
+   AUTH_SECRET=replace-with-a-long-random-string
    PORT=3000
    ```
 

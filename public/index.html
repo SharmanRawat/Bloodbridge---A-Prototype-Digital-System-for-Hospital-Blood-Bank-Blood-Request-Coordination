@@ -80,14 +80,16 @@
 (function() {
   const role = localStorage.getItem('role');
   const userId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
   const nav = document.getElementById('navbarLinks');
   if (!nav) return;
+  const loggedIn = !!(role && userId && token);
 
 
   let links = '<li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>';
 
 
-  if (role && userId) {
+  if (loggedIn) {
     // logged in – show the correct dashboard link
     if (role === 'hospital') {
       links += '<li class="nav-item"><a class="nav-link" href="hospital.html">Hospital Dashboard</a></li>';
