@@ -5,67 +5,71 @@ A web prototype that digitises the emergency blood request workflow between a ho
 ## What problem does this solve?
 Currently, hospital staff manually call multiple blood banks, find a match, fill a physical form, and send a patient’s relative with it. BloodBridge replaces that with a digital search → digital requisition → real‑time status tracking loop.
 
-## Tech Stack (MUST follow these)
+## Tech Stack
 - **Backend:** Node.js + Express
-- **Database:** SQLite (file `bloodbridge.db`) using `better-sqlite3`
-- **Frontend:** Plain HTML, CSS, and vanilla JavaScript — **no frameworks or libraries** except Bootstrap 5 (CDN)
+- **Database:** PostgreSQL
+- **Frontend:** Plain HTML, CSS, and vanilla JavaScript — no frameworks or libraries except Bootstrap 5 (CDN)
 - **All API calls** use `fetch()` to relative paths (`/api/...`)
 
-#Project Structure:- 
 ## Project Structure
-
 ```
-bloodbridge/
 ├── server.js                # Main Express server
-├── database.js              # Database setup & seed data
+├── db.js                    # PostgreSQL DB config, schema & seed data
+├── middleware/
+│   └── auth.js
 ├── routes/
-│   ├── hospital.js          # Hospital routes
-│   ├── bloodbank.js         # Blood bank routes
-│   └── auth.js              # auth.js
+│   ├── admin.js
+│   ├── auth.js
+│   ├── bloodbank.js
+│   └── donors.js
 ├── public/
-│   ├── index.html           # Landing page
-│   ├── hospital.html        # Hospital dashboard
-│   ├── hospital_status.html # Request status page
-│   ├── bloodbank.html       # Blood bank dashboard
-│   ├── requisition.html     # Printable slip
-│   ├── login.html           # Login HTML Page
-│   ├── register.html        # Register HTML Page
-│   └── style.css            # UI/UX implemented in all the pages
+│   ├── index.html
+│   ├── hospital.html
+│   ├── hospital_status.html
+│   ├── bloodbank.html
+│   ├── requisition.html
+│   ├── login.html
+│   ├── register.html
+│   ├── admin.html
+│   ├── admin-login.html
+│   ├── delivery.html
+│   ├── donor-register.html
+│   ├── track-delivery.html
+│   └── style.css
 ├── package.json
-├── .gitignore
 └── README.md
 ```
-## How to Run (for everyone)
+
+## Environment Variables
+Set the following environment variable before starting the app:
+- `DATABASE_URL` - PostgreSQL connection string (e.g., from Neon, Render Postgres, or Supabase)
+
+## How to Run Locally
 1. **Clone** the repo:
    ```bash
    git clone <repo-url>
-   cd bloodbridge
-Install dependencies (only the first time):
+   cd Bloodbridge---A-Prototype-Digital-System-for-Hospital-Blood-Bank-Blood-Request-Coordination
+   ```
 
-bash
-npm install
-Create the database & seed data:
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-bash
-node database.js
-Start the server:
+3. **Set up environment variables**:
+   Create a `.env` file in the root directory with:
+   ```env
+   DATABASE_URL=postgresql://user:password@host:port/database
+   PORT=3000
+   ```
 
-bash
-node server.js
-Open in browser: http://localhost:3000
+4. **Start the server**:
+   ```bash
+   npm start
+   ```
 
-Already Working Features
-✅ Hospital can search blood banks by blood group and see distances (Haversine formula)
+5. **Open in browser**: http://localhost:3000
 
-✅ Hospital can send a digital requisition – stock is deducted
-
-✅ Blood bank can view incoming requests and acknowledge them
-
-✅ Blood bank can manually update inventory
-
-✅ Hospital can track request status (Pending / Acknowledged) with auto‑refresh
-
-✅ Printable requisition slip (open requisition.html?id=<id>)
 ## API Endpoints (for reference)
 
 **Hospital**
@@ -77,52 +81,14 @@ Already Working Features
 **Blood Bank**
 - `GET /api/bloodbank/requests/:bankId` – Get incoming requests
 - `PUT /api/bloodbank/request/:id/acknowledge` – Acknowledge a request
+- `POST /api/bloodbank/request/:id/verify-pickup` – Verify OTP
 - `GET /api/bloodbank/inventory/:bankId` – Get bank inventory
 - `PUT /api/bloodbank/inventory/:bankId` – Update inventory
-Mandatory Rules for Frontend Developers
-Use plain HTML/CSS/JS only. Do not add React, Vue, or any build tool.
 
-Use the existing Bootstrap 5 CDN (already included in all .html files).
+## Notes
+- The app automatically creates tables and seeds initial data on first run
+- Default credentials are for testing only (not suitable for production)
+- Deployments on Render need `DATABASE_URL` set in the service environment variables
 
-All API calls must be relative – e.g., fetch('/api/hospital/request').
-
-After auth is ready, user ID and role will be stored in localStorage:
-
-localStorage.getItem('userId')
-
-localStorage.getItem('role')
-
-Replace any hardcoded IDs (like hospitalId: 1) with these values.
-
-Keep the existing HTML structure – just add your styles and logic.
-
-Create a branch for your work (git checkout -b your-task) and push it to GitHub. Don't push directly to main until it's tested and reviewed.
-
-Dummy Data (for testing)
-Hospital: SVP Hospital Vasad (ID = 1)
-
-Blood banks: Red Cross Vadodara (1), SSG Blood Bank (2), GMERS Gotri (3)
-
-Inventory is randomly seeded each time you run node database.js. Run it again if you need fresh stock.
-
-Upcoming Module: Authentication
-One team member is adding login and registration pages. Once ready, you'll use localStorage to get the logged‑in user's ID and role. Until then, you can temporarily use hardcoded IDs for testing (e.g., hospitalId = 1).
-
-Team
-Swapnil Pandya (Team Leader)
-
-Sharman Rawat
-
-Sat Joshi
-
-Het Varia
-
-Yug Patel
-
-License
+## License
 This project is for educational purposes only.
-
-text
-
----
-
