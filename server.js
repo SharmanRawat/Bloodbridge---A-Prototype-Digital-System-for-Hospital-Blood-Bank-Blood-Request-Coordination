@@ -84,3 +84,35 @@ app.post('/api/hospital/request', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+// Mount remaining routes
+app.use('/api/bloodbank', require('./routes/bloodbank'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/donors', require('./routes/donors'));
+
+function startServer(port) {
+  server.listen(port, () => {
+    console.log(`BloodBridge server running on port ${port}`);
+  });
+}
+
+async function initialize() {
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      await initDB();
+      const PORT = process.env.PORT || 3000;
+      startServer(PORT);
+      return;
+    } catch (err) {
+      retries--;
+      console.error(`Database init failed (${5 - retries}/5 attempts):`, err.message);
+      if (retries === 0) {
+        console.error('Failed to initialize database after multiple attempts. Exiting...');
+        process.exit(1);
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+}
+
+initialize();
