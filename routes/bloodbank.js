@@ -6,6 +6,17 @@ const { safeEqual } = require('../middleware/auth');
 
 const BLOOD_GROUPS = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
 
+// 6-character bag issue code, generated when the bank verifies the pickup OTP.
+// Unambiguous alphabet (no 0/O/1/I) so it can be read from a bag label safely.
+// The hospital must enter this code to complete the delivery.
+function generateIssueCode() {
+  const crypto = require('crypto');
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += alphabet[crypto.randomInt(alphabet.length)];
+  return code;
+}
+
 // Get incoming requests
 router.get('/requests/:bankId', requireRole('bloodbank'), async (req, res) => {
   if (parseInt(req.params.bankId) !== req.userId) return res.status(403).json({ error: 'Access denied' });
@@ -28,7 +39,7 @@ router.put('/request/:id/acknowledge', requireRole('bloodbank'), async (req, res
 
   const otp = require('crypto').randomInt(1000, 9999).toString();
 
-  await query('UPDATE request SET status = $1, pickup_otp = $2 WHERE id = $3', ['Acknowledged', otp, req.params.id]);
+  await query('UPDATE request SET status = $1, pickup_otp = $2, acknowledged_at = NOW() WHERE id = $3', ['Acknowledged', otp, req.params.id]);
   await query("UPDATE request SET status = 'Cancelled' WHERE hospital_id = $1 AND blood_group = $2 AND id <> $3 AND status = 'Pending'",
     [request.hospital_id, request.blood_group, req.params.id]);
 
@@ -46,8 +57,20 @@ router.post('/request/:id/verify-pickup', requireRole('bloodbank'), async (req, 
     return res.status(400).json({ error: 'Request cannot be verified now' });
   if (!request.pickup_otp || !safeEqual(String(otp || '').trim(), String(request.pickup_otp).trim()))
     return res.status(400).json({ success: false, message: 'Invalid OTP' });
-  await query("UPDATE request SET status = 'Ready' WHERE id = $1", [req.params.id]);
-  res.json({ success: true, message: 'Pickup verified' });
+  // Bag issued: generate the unique issue code the hospital will verify at receipt.
+  const issueCode = generateIssueCode();
+  await query("UPDATE request SET status = 'Ready', ready_at = NOW(), issue_code = $1 WHERE id = $2", [issueCode, req.params.id]);
+  res.json({ success: true, message: 'Pickup verified', issueCode });
+});
+
+// Permanent delivery audit log for this bank (chain-of-custody records).
+// A row is written automatically when the hospital verifies the bag issue code.
+router.get('/delivery-log/:bankId', requireRole('bloodbank'), async (req, res) => {
+  if (parseInt(req.params.bankId) !== req.userId) return res.status(403).json({ error: 'Access denied' });
+  const { rows } = await query(`
+    SELECT * FROM delivery_log WHERE blood_bank_id = $1 ORDER BY delivered_at DESC LIMIT 100
+  `, [req.params.bankId]);
+  res.json(rows);
 });
 
 // Inventory

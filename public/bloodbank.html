@@ -74,6 +74,9 @@
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="donors-tab" data-bs-toggle="tab" data-bs-target="#donors" type="button">Find Donors</button>
       </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="log-tab" data-bs-toggle="tab" data-bs-target="#log" type="button"><i class="fa-solid fa-clipboard-check me-1"></i> Delivery Log</button>
+      </li>
     </ul>
 
     <div class="tab-content mt-3">
@@ -141,6 +144,12 @@
           </div>
         </div>
         <div id="donorResults" class="mt-3"></div>
+      </div>
+
+      <!-- Delivery Log Tab (permanent chain-of-custody records) -->
+      <div class="tab-pane fade" id="log">
+        <p class="text-muted">Permanent record of every completed delivery: bag code, hospital, rider and durations.</p>
+        <div id="deliveryLogContent" class="table-responsive"></div>
       </div>
     </div><!-- /tab-content -->
 </main>
@@ -291,6 +300,10 @@ document.getElementById('analytics-tab').addEventListener('shown.bs.tab', () => 
   loadAnalytics();
 });
 
+document.getElementById('log-tab').addEventListener('shown.bs.tab', () => {
+  loadDeliveryLog();
+});
+
 // ----- 4. Load incoming requests -----
 async function loadRequests() {
   const bankId = parseInt(localStorage.getItem('userId'));  // already defined
@@ -335,9 +348,10 @@ async function loadRequests() {
         <button class="btn btn-sm btn-bb-red ms-1" onclick="verifyPickup(${req.id})">Verify Pickup</button>
         <span id="verifyMsg${req.id}" class="ms-2"></span>
       </div>` : ''}
+      ${req.status === 'Ready' && req.issue_code ? `<div class="otp-box mt-2" style="border-color:#198754;"><strong>🏷️ Bag Issue Code</strong><div class="otp-value" style="color:#198754;">${e(req.issue_code)}</div><small class="text-muted">Print/write this on the bag slip — the hospital enters it at receipt</small></div>` : ''}
       ${req.status === 'Ready' ? `<small class="text-muted d-block mt-2">🩸 OTP verified — waiting for the rider to confirm "Blood Bag Received"…</small>` : ''}
-      ${req.status === 'OutForDelivery' ? `<small class="text-muted d-block mt-2">🚚 Out for delivery to the hospital.</small>` : ''}
-      ${req.status === 'Delivered' ? `<small class="text-success d-block mt-2">✅ Completed — delivered to the hospital.</small>` : ''}
+      ${req.status === 'OutForDelivery' ? `<small class="text-muted d-block mt-2">🚚 Out for delivery to the hospital${req.issue_code ? ' — bag code <strong>' + e(req.issue_code) + '</strong>' : ''}.</small>` : ''}
+      ${req.status === 'Delivered' ? `<small class="text-success d-block mt-2">✅ Completed — delivered to the hospital${req.issue_code ? ' (bag code ' + e(req.issue_code) + ')' : ''}.</small>` : ''}
     </div>
   `;
     }).join('');
@@ -360,7 +374,8 @@ async function verifyPickup(requestId) {
     const data = await res.json();
     const msgEl = document.getElementById(`verifyMsg${requestId}`);
     if (data.success) {
-      msgEl.innerHTML = '<span class="text-success">✅ Pickup Verified — hand over the blood bag</span>';
+      const codeMsg = data.issueCode ? ` — bag issue code: <strong>${escapeHtml(data.issueCode)}</strong>` : '';
+      msgEl.innerHTML = `<span class="text-success">✅ Pickup Verified${codeMsg} — hand over the blood bag</span>`;
       setTimeout(loadRequests, 2000);  // refresh to show updated status
     } else {
       msgEl.innerHTML = '<span class="text-danger">❌ Invalid OTP</span>';
@@ -481,6 +496,54 @@ document.getElementById('updateStockBtn').addEventListener('click', async () => 
 setInterval(loadRequests, 10000);
 loadRequests();
 loadInventory();
+
+// ----- Delivery Log (permanent audit records) -----
+function fmtDur(sec) {
+  if (sec == null) return 'N/A';
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+async function loadDeliveryLog() {
+  const container = document.getElementById('deliveryLogContent');
+  container.innerHTML = '<div class="text-muted">Loading log…</div>';
+  try {
+    const res = await fetch(`/api/bloodbank/delivery-log/${bankId}`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      container.innerHTML = '<div class="alert alert-info">No completed deliveries yet. A record is written automatically when a hospital verifies the bag issue code.</div>';
+      return;
+    }
+    const e = escapeHtml;
+    container.innerHTML = `
+      <table class="table table-bordered table-sm align-middle">
+        <thead><tr>
+          <th>Bag Code</th><th>Req #</th><th>Hospital</th><th>Group / Units</th>
+          <th>Component</th><th>Rider</th><th>Bags Issued</th><th>Delivered</th><th>Transit Time</th><th>Total Time</th>
+        </tr></thead>
+        <tbody>
+          ${data.map(r => `
+            <tr>
+              <td><strong>${e(r.issue_code || 'N/A')}</strong></td>
+              <td>#${e(r.request_id)}</td>
+              <td>${e(r.hospital_name || 'N/A')}</td>
+              <td>${e(r.blood_group)} / ${e(r.units)}</td>
+              <td>${e(r.component || 'PRBC')}</td>
+              <td>${e(r.rider_name || 'N/A')}${r.rider_phone ? '<br><small>' + e(r.rider_phone) + '</small>' : ''}</td>
+              <td>${r.picked_up_at ? e(new Date(r.picked_up_at).toLocaleString()) : 'N/A'}</td>
+              <td>${r.delivered_at ? e(new Date(r.delivered_at).toLocaleString()) : 'N/A'}</td>
+              <td>${fmtDur(r.transit_seconds)}</td>
+              <td>${fmtDur(r.total_seconds)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = '<div class="alert alert-danger">Failed to load delivery log.</div>';
+  }
+}
 
 
 // ========== FIND DONORS ==========

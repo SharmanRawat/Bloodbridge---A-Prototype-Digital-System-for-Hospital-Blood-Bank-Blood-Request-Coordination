@@ -108,6 +108,48 @@ async function initDB() {
   await query(`ALTER TABLE blood_bank ADD COLUMN IF NOT EXISTS flagged INTEGER DEFAULT 0`);
   await query(`ALTER TABLE blood_bank ADD COLUMN IF NOT EXISTS phone TEXT`);
 
+  // Bag issue code + permanent delivery audit log (additive, idempotent).
+  // The issue code is generated when the bank verifies the pickup OTP; the
+  // hospital must enter it to complete delivery, and every completed delivery
+  // is copied into delivery_log as a permanent chain-of-custody record.
+  //
+  // Wrapped in try/catch so that a migration failure can NEVER prevent the
+  // server from booting: the app logs a warning and continues. All statements
+  // are "IF NOT EXISTS" so they are safe to re-run on every startup.
+  try {
+    await query(`ALTER TABLE request ADD COLUMN IF NOT EXISTS issue_code TEXT`);
+    await query(`ALTER TABLE request ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE request ADD COLUMN IF NOT EXISTS ready_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE request ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ`);
+    await query(`
+      CREATE TABLE IF NOT EXISTS delivery_log (
+        id SERIAL PRIMARY KEY,
+        request_id INTEGER REFERENCES request(id),
+        issue_code TEXT,
+        blood_bank_id INTEGER REFERENCES blood_bank(id),
+        hospital_id INTEGER REFERENCES hospital(id),
+        bank_name TEXT,
+        hospital_name TEXT,
+        blood_group TEXT,
+        component TEXT,
+        units INTEGER,
+        rider_name TEXT,
+        rider_phone TEXT,
+        request_created_at TIMESTAMPTZ,
+        acknowledged_at TIMESTAMPTZ,
+        picked_up_at TIMESTAMPTZ,
+        delivered_at TIMESTAMPTZ,
+        transit_seconds INTEGER,
+        total_seconds INTEGER,
+        logged_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_delivery_log_bank ON delivery_log (blood_bank_id)`);
+    console.log('Chain-of-custody schema ready (issue_code + delivery_log)');
+  } catch (err) {
+    console.warn('Chain-of-custody migration skipped (server will still start):', err.message);
+  }
+
   // Performance indexes (idempotent).
   await query(`
     CREATE INDEX IF NOT EXISTS idx_request_hospital ON request (hospital_id);

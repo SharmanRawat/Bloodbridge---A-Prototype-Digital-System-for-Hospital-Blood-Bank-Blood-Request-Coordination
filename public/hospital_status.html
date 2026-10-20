@@ -142,10 +142,18 @@ window.cancelRequest = async function(requestId) {
   if (data.success) loadStatus(); else alert('Failed: ' + (data.error||'unknown'));
 };
 window.confirmDelivery = async function(requestId) {
-  if (!confirm('Confirm blood received?')) return;
-  const res = await fetch(`/api/hospital/request/${requestId}/delivered`, { method:'PUT', headers:authHeaders() });
+  const input = document.getElementById(`bagCodeInput${requestId}`);
+  const code = input ? input.value.trim() : '';
+  if (!code) { alert('Enter the bag issue code printed on the blood bag slip.'); return; }
+  if (!confirm('Confirm this bag was received? This is logged permanently.')) return;
+  const res = await fetch(`/api/hospital/request/${requestId}/delivered`, {
+    method:'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token')||'') },
+    body: JSON.stringify({ issue_code: code })
+  });
   const data = await res.json();
-  if (data.success) loadStatus(); else alert('Failed: ' + (data.error||'unknown'));
+  if (data.success) { alert('✅ Delivery confirmed and logged.'); loadStatus(); }
+  else alert('Failed: ' + (data.error||'unknown'));
 };
 
 async function loadStatus() {
@@ -180,7 +188,12 @@ async function loadStatus() {
       }
       let actionButtons = '';
       if (['Pending','Acknowledged','InTransit','OutForDelivery'].includes(req.status)) actionButtons += `<button class="btn btn-sm btn-bb-outline-red ms-1" onclick="cancelRequest(${req.id})">Cancel</button>`;
-      if (req.status==='OutForDelivery') actionButtons += `<button class="btn btn-sm btn-bb-red ms-1" onclick="confirmDelivery(${req.id})">Confirm Delivery</button>`;
+      if (req.status==='OutForDelivery') actionButtons += `
+        <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+          <input type="text" id="bagCodeInput${req.id}" class="form-control form-control-sm" style="max-width:170px;text-transform:uppercase;" placeholder="Bag issue code" maxlength="6" autocomplete="off">
+          <button class="btn btn-sm btn-bb-red" onclick="confirmDelivery(${req.id})">Confirm Delivery</button>
+          <small class="text-muted">Enter the code printed on the bag slip (rider carries it).</small>
+        </div>`;
       const riderActive = ['Acknowledged','InTransit','Ready','OutForDelivery'].includes(req.status);
       const riderUrl = `track-delivery.html?id=${e(req.id)}` + (req.delivery_token ? `&t=${encodeURIComponent(req.delivery_token)}` : '');
       const qrHtml = riderActive ? `

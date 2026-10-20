@@ -214,14 +214,43 @@ app.put('/api/hospital/request/:id/cancel', requireRole('hospital'), async (req,
 });
 
 app.put('/api/hospital/request/:id/delivered', requireRole('hospital'), async (req, res) => {
-  const { rows } = await query('SELECT * FROM request WHERE id = $1', [req.params.id]);
+  const { rows } = await query(`
+    SELECT r.*, b.name AS bank_name, h.name AS hospital_name
+    FROM request r
+    JOIN blood_bank b ON r.blood_bank_id = b.id
+    JOIN hospital h ON r.hospital_id = h.id
+    WHERE r.id = $1
+  `, [req.params.id]);
   const request = rows[0];
   if (!request) return res.status(404).json({ error: 'Request not found' });
   if (request.hospital_id !== req.userId) return res.status(403).json({ error: 'Access denied' });
   if (!['InTransit','OutForDelivery'].includes(request.status))
     return res.status(400).json({ error: 'Must be InTransit or OutForDelivery' });
-  await query("UPDATE request SET status = 'Delivered' WHERE id = $1", [req.params.id]);
-  res.json({ success: true });
+
+  // Chain-of-custody: the hospital must enter the bank-generated bag issue
+  // code (shown on the rider's bag slip) before delivery can be completed.
+  const entered = String(req.body?.issue_code || '').trim().toUpperCase();
+  if (!request.issue_code || !entered || !safeEqual(entered, request.issue_code))
+    return res.status(400).json({ success: false, error: 'Invalid bag issue code — check the code printed on the bag slip' });
+
+  await query("UPDATE request SET status = 'Delivered', delivered_at = NOW() WHERE id = $1", [req.params.id]);
+
+  // Permanent audit record: which bag, to which hospital, by which rider, how long.
+  const deliveredAt = new Date();
+  const pickedUpAt = request.ready_at ? new Date(request.ready_at) : null;
+  const createdAt = new Date(request.created_at);
+  const transitSeconds = pickedUpAt ? Math.max(0, Math.round((deliveredAt - pickedUpAt) / 1000)) : null;
+  const totalSeconds = Math.max(0, Math.round((deliveredAt - createdAt) / 1000));
+  await query(`
+    INSERT INTO delivery_log (request_id, issue_code, blood_bank_id, hospital_id, bank_name, hospital_name,
+      blood_group, component, units, rider_name, rider_phone,
+      request_created_at, acknowledged_at, picked_up_at, delivered_at, transit_seconds, total_seconds)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+  `, [request.id, request.issue_code, request.blood_bank_id, request.hospital_id, request.bank_name, request.hospital_name,
+      request.blood_group, request.component, request.units, request.delivery_name, request.delivery_phone,
+      request.created_at, request.acknowledged_at, pickedUpAt, deliveredAt, transitSeconds, totalSeconds]);
+
+  res.json({ success: true, message: 'Delivery confirmed and logged', issueCode: request.issue_code });
 });
 
 app.get('/api/hospital/location', requireRole('hospital'), async (req, res) => {
