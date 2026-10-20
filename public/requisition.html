@@ -95,13 +95,17 @@
       <div id="qrcode" class="text-center mb-3"></div>
       <p class="text-muted">This is a digital pre-intimation. Physical verification required at blood bank.</p>
     `;
-    // Generate QR code
+    // Generate QR code — encodes the absolute slip URL so a phone can open it
     const qrContainer = document.getElementById('qrcode');
     new QRCode(qrContainer, {
-      text: `BLOODBRIDGE:${req.id}`,
-      width: 128,
-      height: 128
+      text: `${location.origin}/requisition.html?id=${req.id}`,
+      width: 160,
+      height: 160
     });
+    const qrCaption = document.createElement('small');
+    qrCaption.className = 'text-muted';
+    qrCaption.textContent = 'Scan to open this requisition digitally';
+    qrContainer.appendChild(qrCaption);
   }
   if (id) loadSlip();
 </script>

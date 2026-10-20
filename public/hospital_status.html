@@ -73,6 +73,17 @@ const trackerMarkers = {};
 const deliveryInfo = {};
 const socket = io();
 
+// Human-readable progress message shown under every status badge
+const STAGE_MSG = {
+  'Pending': '⏳ Order placed — waiting for a blood bank to acknowledge…',
+  'Acknowledged': '✅ Accepted — share the Pickup OTP with your rider.',
+  'InTransit': '🏍️ Rider is on the way to the blood bank — live tracking on.',
+  'Ready': '🩸 OTP verified — waiting for the rider to collect the blood bag.',
+  'OutForDelivery': '🚚 Blood collected — out for delivery to your hospital!',
+  'Delivered': '🏁 Completed — blood received. Thank you!',
+  'Cancelled': '❌ This request was cancelled.'
+};
+
 function authHeaders() {
   return { 'Authorization': 'Bearer ' + (localStorage.getItem('token')||'') };
 }
@@ -184,7 +195,7 @@ async function loadStatus() {
             ${req.patient_name?`<div class="patient-info"><strong>Patient:</strong> ${e(req.patient_name)} (${e(req.patient_age_sex||'')})<br><strong>Ward/Reg:</strong> ${e(req.ward||'N/A')} / ${e(req.reg_no||'N/A')}<br><strong>Doctor:</strong> ${e(req.doctor_name||'N/A')} | <strong>Contact:</strong> ${e(req.contact_no||'N/A')}<br><strong>Diagnosis:</strong> ${e(req.diagnosis||'N/A')}<br><strong>Component:</strong> ${e(req.component||'PRBC')} ${req.specific_requirement?'('+e(req.specific_requirement)+')':''}</div>`:''}
             ${req.delivery_name ? `<p class="mb-1 mt-1"><strong>🏍️ Rider:</strong> ${e(req.delivery_name)} (${e(req.delivery_phone||'N/A')})</p>` : ''}
             <small class="text-muted">${e(new Date(req.created_at).toLocaleString())}</small>
-          </div><span class="status-badge ${statusClass}">${e(req.status)}</span></div>
+          </div><div class="text-end ms-2"><span class="status-badge ${statusClass}">${e(req.status === 'Delivered' ? 'Completed ✓' : req.status)}</span><div class="small fw-semibold mt-1" style="color:var(--bb-muted);">${e(STAGE_MSG[req.status] || '')}</div></div></div>
           ${(req.status==='Acknowledged'||req.status==='InTransit')&&req.pickup_otp?`<div class="otp-box mt-3"><strong>Pickup OTP:</strong><div class="otp-value">${e(req.pickup_otp)}</div><small class="text-muted">Share this code with the collection person</small></div>`:''}
           ${qrHtml}${trackerHtml}
           <div class="mt-2"><a href="requisition.html?id=${e(req.id)}" class="btn btn-sm btn-outline-secondary">View Slip</a>${actionButtons}</div>
@@ -215,7 +226,14 @@ async function loadStatus() {
     data.forEach(req => {
       if (req.delivery_name) deliveryInfo[req.id] = { name: req.delivery_name, phone: req.delivery_phone||'N/A' };
       if (['Acknowledged','InTransit','Ready','OutForDelivery'].includes(req.status) && req.delivery_token && document.getElementById(`qr${req.id}`) && document.getElementById(`qr${req.id}`).childElementCount===0) {
-        new QRCode(document.getElementById(`qr${req.id}`), { text: `${location.origin}/track-delivery.html?id=${req.id}&t=${encodeURIComponent(req.delivery_token)}`, width:80, height:80 });
+        const riderQrUrl = `${location.origin}/track-delivery.html?id=${req.id}&t=${encodeURIComponent(req.delivery_token)}`;
+        new QRCode(document.getElementById(`qr${req.id}`), { text: riderQrUrl, width: 200, height: 200 });
+        if (['localhost', '127.0.0.1'].includes(location.hostname)) {
+          const warn = document.createElement('small');
+          warn.className = 'text-danger text-center';
+          warn.textContent = '⚠️ Running on localhost — a phone cannot open this QR. Use the "Open rider page" link above instead.';
+          document.getElementById(`qr${req.id}`).appendChild(warn);
+        }
       }
       if ((req.status==='InTransit' || req.status==='OutForDelivery') && !trackerMaps[req.id] && document.getElementById(`trackerMap${req.id}`)) {
         initTrackerMap(`trackerMap${req.id}`, req.id);

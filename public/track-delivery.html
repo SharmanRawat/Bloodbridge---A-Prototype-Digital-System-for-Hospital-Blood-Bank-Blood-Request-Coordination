@@ -153,9 +153,27 @@ async function fetchOTP() {
     if (res.status === 401 || res.status === 403) {
       document.getElementById('statusText').textContent = '❌ Invalid or missing delivery link. Please use the QR/link provided.';
       document.getElementById('statusText').style.color = 'red';
+      if (statusPollInterval) { clearInterval(statusPollInterval); statusPollInterval = null; } // stop polling a dead link
       return;
     }
     const data = await res.json();
+
+    // Friendly stage message so the rider always knows where things stand
+    // (skipped while actively streaming location — emitLocation updates the text then).
+    const STAGE_MSG = {
+      Pending: '⏳ Waiting for the blood bank to acknowledge this request…',
+      Acknowledged: '✅ Accepted by the blood bank — show the Pickup OTP below at the counter.',
+      InTransit: '🏍️ On the way to the blood bank to collect the blood.',
+      Ready: '🩸 OTP verified — tap "I have the blood bag" to collect it.',
+      OutForDelivery: '🚚 Blood collected — out for delivery to the hospital.',
+      Delivered: '🏁 Completed — blood received by the hospital.',
+      Cancelled: '❌ This request was cancelled.'
+    };
+    if (STAGE_MSG[data.status] && !manualInterval && !gpsWatchId) {
+      const st = document.getElementById('statusText');
+      st.style.color = '';
+      st.textContent = STAGE_MSG[data.status];
+    }
 
     // Show OTP if not already displayed
     if (data.pickup_otp && !document.getElementById('otpContainer').innerHTML) {
@@ -223,6 +241,15 @@ if (navigator.geolocation) {
   document.getElementById('gpsStartBtn').disabled = false;
 } else {
   document.getElementById('gpsSection').style.display = 'none';
+}
+
+// Auto-load status & OTP the moment the page opens and keep polling every 5s.
+// The rider must NOT have to start tracking just to see progress, the OTP,
+// or the "I have the blood bag" button.
+if (requestId) {
+  fetchOTP();
+  if (statusPollInterval) clearInterval(statusPollInterval);
+  statusPollInterval = setInterval(fetchOTP, 5000);
 }
 
 async function navigateToBloodBank() {
